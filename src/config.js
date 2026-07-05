@@ -1,0 +1,17 @@
+require('dotenv').config();
+
+module.exports = {
+  botName: process.env.BOT_NAME || 'Fauzy Store Bot',
+  prefix: process.env.PREFIX || '.',
+
+  ownerNumber: (process.env.OWNER_NUMBER || '6285876846768').replace(/\D/g, ''),
+  ownerMentionName: process.env.OWNER_MENTION_NAME || 'Fauzy',
+
+  payment: {
+    gopayNumber: process.env.GOPAY_NUMBER || '085876846768',
+    gopayName: process.env.GOPAY_NAME || 'Ahmad Fauzy',
+  },
+
+  tz: process.env.TZ || 'Asia/Jakarta',
+  logOrderMessages: String(process.env.LOG_ORDER_MESSAGES || 'true') === 'true',
+};
