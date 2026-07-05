@@ -1,5 +1,5 @@
 const config = require('./config');
-const { pickText, jid, getSenderNumber } = require('./utils/format');
+const { pickText, jid, getSenderNumber, isOwner } = require('./utils/format');
 
 const menu = require('./commands/menu');
 const catalog = require('./commands/catalog');
@@ -11,6 +11,7 @@ const reset = require('./commands/reset');
 const edit = require('./commands/edit');
 const { handlePendingEdit } = require('./commands/edit');
 const grup = require('./commands/grup');
+const { addtext, findCustomTextByMessage } = require('./commands/addtext');
 
 const { handleAutoFeatures } = require('./modules/autoFeatures');
 const { logAudit, getSetting } = require('./modules/orderService');
@@ -41,6 +42,8 @@ const commands = {
 
   grup,
   group: grup,
+
+  addtext,
 };
 
 function isGroupJid(jidValue) {
@@ -102,6 +105,17 @@ async function route(sock, msg) {
     if (lowerText === 'menu' || lowerText === 'help') {
       commandText = `${config.prefix}${lowerText}`;
     } else {
+      // Custom text hanya bisa dipanggil oleh owner
+      // Contoh owner ketik: love you
+      // Orang lain ketik: love you → bot diam
+      if (!isOwner(ctx.msg)) return;
+
+      const customText = findCustomTextByMessage(commandTextRaw);
+
+      if (customText) {
+        return ctx.reply(customText.response_text);
+      }
+
       return;
     }
   }

@@ -75,6 +75,15 @@ CREATE TABLE IF NOT EXISTS private_welcome_logs (
   chat_jid TEXT PRIMARY KEY,
   last_sent_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS custom_texts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  trigger_key TEXT UNIQUE NOT NULL,
+  trigger_text TEXT NOT NULL,
+  response_text TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `);
 
 /*
