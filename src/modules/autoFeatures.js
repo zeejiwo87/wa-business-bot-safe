@@ -67,6 +67,11 @@ function getMentionedJids(msg) {
   return contextInfo?.mentionedJid || [];
 }
 
+function getGroupMentions(msg) {
+  const contextInfo = getContextInfo(msg);
+  return contextInfo?.groupMentions || [];
+}
+
 function groupFeatureEnabled(groupJid) {
   const row = db.prepare(`
     SELECT enabled FROM group_features WHERE group_jid = ?
@@ -94,10 +99,35 @@ function buildTargetNumbers(ctx) {
   ].filter(Boolean);
 }
 
+function mentionsEveryone(ctx) {
+  const text = String(ctx.text || '').toLowerCase();
+  const mentions = getMentionedJids(ctx.msg) || [];
+  const groupMentions = getGroupMentions(ctx.msg) || [];
+
+  // Support tulisan @semua, @all, @everyone, @anggota
+  const hasEveryoneText = /(^|\s)@(semua|all|everyone|anggota)\b/i.test(text);
+
+  // Support metadata mention grup dari WhatsApp/Baileys
+  const hasGroupMentionMetadata = groupMentions.length > 0;
+
+  // Jaga-jaga kalau WhatsApp mengirim mention grup sebagai JID grup
+  const mentionedGroupJid = mentions.some((mentionedJid) => {
+    const value = String(mentionedJid || '');
+    return value === ctx.from || value.endsWith('@g.us');
+  });
+
+  return hasEveryoneText || hasGroupMentionMetadata || mentionedGroupJid;
+}
+
 function mentionsTarget(ctx) {
   const text = String(ctx.text || '').toLowerCase();
   const mentions = getMentionedJids(ctx.msg) || [];
   const targetNumbers = buildTargetNumbers(ctx);
+
+  // Baru: kalau ada @semua / @all / @everyone, bot juga ikut merespon
+  if (mentionsEveryone(ctx)) {
+    return true;
+  }
 
   const mentionedNumbers = mentions
     .map(normalizeNumber)
@@ -197,19 +227,28 @@ async function handleGroupFeatures(ctx) {
   const ownerName = config.ownerMentionName || 'Fauzy';
   const ownerMessage = isOwner(ctx.msg) || ctx.msg.key.fromMe;
 
-  // Kalau ada orang lain mention nomor bot/owner
+  // Kalau ada orang lain mention nomor bot/owner atau pakai mention semua (@semua/@all/@everyone)
   if (!ownerMessage && mentionsTarget(ctx)) {
     const senderJid = ctx.msg.key.participant || ctx.msg.participant || ctx.from;
     const senderLabel = normalizeNumber(senderJid) || 'there';
+    const everyoneMentioned = mentionsEveryone(ctx);
+
+    const responseText = everyoneMentioned
+      ? `Hi @${senderLabel} 👋
+
+Fauzy’s bot noticed the @semua mention 😄
+Message received at ${getMessageTimeText(ctx.msg)}.
+Please wait a bit, ${ownerName} will reply soon. Don’t run away yet hehe 🏃‍♂️💨`
+      : `Hi @${senderLabel} 👋
+
+Fauzy’s bot is awake and active 😄
+Message received at ${getMessageTimeText(ctx.msg)}.
+Please wait a bit, ${ownerName} will reply soon. Don’t run away yet hehe 🏃‍♂️💨`;
 
     await ctx.sock.sendMessage(
       ctx.from,
       {
-        text: `Hi @${senderLabel} 👋
-
-Fauzy’s bot is awake and active 😄
-Message received at ${getMessageTimeText(ctx.msg)}.
-Please wait a bit, ${ownerName} will reply soon. Don’t run away yet hehe 🏃‍♂️💨`,
+        text: responseText,
         mentions: [senderJid],
       },
       { quoted: ctx.msg }
