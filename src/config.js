@@ -6,6 +6,8 @@ module.exports = {
 
   ownerNumber: (process.env.OWNER_NUMBER || '6285876846768').replace(/\D/g, ''),
   ownerMentionName: process.env.OWNER_MENTION_NAME || 'Fauzy',
+  ownerInstagram: process.env.OWNER_INSTAGRAM || '',
+  ownerAbout: process.env.OWNER_ABOUT || '',
 
   payment: {
     gopayNumber: process.env.GOPAY_NUMBER || '085876846768',

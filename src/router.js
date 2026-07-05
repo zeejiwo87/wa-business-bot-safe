@@ -12,6 +12,7 @@ const edit = require('./commands/edit');
 const { handlePendingEdit } = require('./commands/edit');
 const grup = require('./commands/grup');
 const { addtext, deltext, findCustomTextByMessage } = require('./commands/addtext');
+const { me, commandList } = require('./commands/profile');
 
 const { handleAutoFeatures } = require('./modules/autoFeatures');
 const { logAudit, getSetting } = require('./modules/orderService');
@@ -19,6 +20,11 @@ const { logAudit, getSetting } = require('./modules/orderService');
 const commands = {
   menu,
   help: menu,
+
+  command: commandList,
+  commands: commandList,
+
+  me,
 
   catalog,
   katalog: catalog,
