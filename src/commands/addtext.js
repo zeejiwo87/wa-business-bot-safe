@@ -66,6 +66,7 @@ async function addtext(ctx) {
     'grup',
     'group',
     'addtext',
+    'deltext',
   ];
 
   if (forbiddenTriggers.includes(parsed.triggerKey)) {
@@ -102,6 +103,43 @@ async function addtext(ctx) {
   );
 }
 
+async function deltext(ctx) {
+  if (!isOwner(ctx.msg)) {
+    return ctx.reply('Command ini khusus owner/admin.');
+  }
+
+  const trigger = String(ctx.argsText || '').trim();
+
+  if (!trigger) {
+    return ctx.reply(
+      `Format salah.\n\nContoh:\n*.deltext love you*`
+    );
+  }
+
+  const triggerKey = normalizeTrigger(trigger);
+
+  const existing = db.prepare(`
+    SELECT trigger_text
+    FROM custom_texts
+    WHERE trigger_key = ?
+  `).get(triggerKey);
+
+  if (!existing) {
+    return ctx.reply(
+      `Custom text dengan trigger *${trigger}* tidak ditemukan.`
+    );
+  }
+
+  db.prepare(`
+    DELETE FROM custom_texts
+    WHERE trigger_key = ?
+  `).run(triggerKey);
+
+  return ctx.reply(
+    `Custom text berhasil dihapus ✅\n\nTrigger: *${existing.trigger_text}*`
+  );
+}
+
 function findCustomTextByMessage(messageText) {
   const triggerKey = normalizeTrigger(messageText);
 
@@ -116,5 +154,6 @@ function findCustomTextByMessage(messageText) {
 
 module.exports = {
   addtext,
+  deltext,
   findCustomTextByMessage,
 };

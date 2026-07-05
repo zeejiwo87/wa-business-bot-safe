@@ -11,7 +11,7 @@ const reset = require('./commands/reset');
 const edit = require('./commands/edit');
 const { handlePendingEdit } = require('./commands/edit');
 const grup = require('./commands/grup');
-const { addtext, findCustomTextByMessage } = require('./commands/addtext');
+const { addtext, deltext, findCustomTextByMessage } = require('./commands/addtext');
 
 const { handleAutoFeatures } = require('./modules/autoFeatures');
 const { logAudit, getSetting } = require('./modules/orderService');
@@ -44,6 +44,7 @@ const commands = {
   group: grup,
 
   addtext,
+  deltext,
 };
 
 function isGroupJid(jidValue) {
