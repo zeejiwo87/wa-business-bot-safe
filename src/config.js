@@ -14,6 +14,7 @@ module.exports = {
   serperApiKey: process.env.SERPER_API_KEY || '',
 
   bmkgDefaultKelurahan: process.env.BMKG_DEFAULT_KELURAHAN || 'Tamansari',
+  bmkgDefaultAdm4: process.env.BMKG_DEFAULT_ADM4 || '35.07.06.2012',
 
   payment: {
     gopayNumber: process.env.GOPAY_NUMBER || '085876846768',
