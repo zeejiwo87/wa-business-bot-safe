@@ -1,4 +1,4 @@
-const config = require('../config');
+﻿const config = require('../config');
 const { isOwner, jid } = require('../utils/format');
 
 function formatPhoneNumber(number) {
@@ -147,12 +147,18 @@ async function commandList(ctx) {
 • ${config.prefix}order premium | CANVA | 1 Tahun Member + Designer | email kamu
 • ${config.prefix}order jasa | Makalah | detail tugas + deadline
 • ${config.prefix}status ORD-xxxx — cek status order
-• ${config.prefix}cancel ORD-xxxx — batalkan order`;
+• ${config.prefix}cancel ORD-xxxx — batalkan order
+
+*MENU BMKG*
+• ${config.prefix}gempa — tampilkan gempa terbaru, gempa dirasakan, dan gempa terkini BMKG
+• ${config.prefix}cuaca — prakiraan cuaca 3 hari untuk lokasi default
+• ${config.prefix}cuaca : Tamansari — prakiraan cuaca berdasarkan desa/kelurahan`;
 
   const ownerCommands = `
 
 *MENU OWNER / ADMIN*
 • ${config.prefix}me — tampilkan profil owner
+• ${config.prefix}googleimage : semeru — kirim 3 gambar teratas dari Google Image
 • ${config.prefix}admin orders — lihat semua order
 • ${config.prefix}admin order ORD-xxxx — lihat detail order
 • ${config.prefix}admin status ORD-xxxx proses/selesai/batal/revisi
@@ -188,7 +194,8 @@ async function commandList(ctx) {
 Catatan:
 • Command owner/admin hanya bisa digunakan oleh owner.
 • Fitur grup hanya aktif kalau sudah dinyalakan dengan ${config.prefix}grup on.
-• Custom text hanya bisa dipanggil oleh owner.`;
+• Custom text hanya bisa dipanggil oleh owner.
+• ${config.prefix}googleimage hanya bisa digunakan oleh owner.`;
 
   return ctx.reply(customerCommands + (owner ? ownerCommands : '') + note);
 }

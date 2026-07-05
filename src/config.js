@@ -13,6 +13,8 @@ module.exports = {
   googleCx: process.env.GOOGLE_CX || '',
   serperApiKey: process.env.SERPER_API_KEY || '',
 
+  bmkgDefaultKelurahan: process.env.BMKG_DEFAULT_KELURAHAN || 'Tamansari',
+
   payment: {
     gopayNumber: process.env.GOPAY_NUMBER || '085876846768',
     gopayName: process.env.GOPAY_NAME || 'Ahmad Fauzy',

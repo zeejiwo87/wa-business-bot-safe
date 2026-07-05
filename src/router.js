@@ -14,6 +14,7 @@ const grup = require('./commands/grup');
 const { addtext, deltext, findCustomTextByMessage } = require('./commands/addtext');
 const { me, commandList } = require('./commands/profile');
 const googleimage = require('./commands/googleimage');
+const { gempa, cuaca } = require('./commands/bmkg');
 
 const { handleAutoFeatures } = require('./modules/autoFeatures');
 const { logAudit, getSetting } = require('./modules/orderService');
@@ -27,6 +28,8 @@ const commands = {
 
   me,
   googleimage,
+  gempa,
+  cuaca,
 
   catalog,
   katalog: catalog,

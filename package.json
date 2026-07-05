@@ -10,10 +10,11 @@
   "dependencies": {
     "@whiskeysockets/baileys": "latest",
     "better-sqlite3": "latest",
+    "bmkg-wrapper": "^2.0.1",
     "dotenv": "latest",
+    "moment-timezone": "latest",
     "pino": "latest",
-    "qrcode-terminal": "latest",
-    "moment-timezone": "latest"
+    "qrcode-terminal": "latest"
   },
   "devDependencies": {
     "nodemon": "latest"
