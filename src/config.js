@@ -9,6 +9,9 @@ module.exports = {
   ownerInstagram: process.env.OWNER_INSTAGRAM || '',
   ownerAbout: process.env.OWNER_ABOUT || '',
 
+  googleApiKey: process.env.GOOGLE_API_KEY || '',
+  googleCx: process.env.GOOGLE_CX || '',
+
   payment: {
     gopayNumber: process.env.GOPAY_NUMBER || '085876846768',
     gopayName: process.env.GOPAY_NAME || 'Ahmad Fauzy',

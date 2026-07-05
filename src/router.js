@@ -13,6 +13,7 @@ const { handlePendingEdit } = require('./commands/edit');
 const grup = require('./commands/grup');
 const { addtext, deltext, findCustomTextByMessage } = require('./commands/addtext');
 const { me, commandList } = require('./commands/profile');
+const googleimage = require('./commands/googleimage');
 
 const { handleAutoFeatures } = require('./modules/autoFeatures');
 const { logAudit, getSetting } = require('./modules/orderService');
@@ -25,6 +26,7 @@ const commands = {
   commands: commandList,
 
   me,
+  googleimage,
 
   catalog,
   katalog: catalog,
