@@ -17,20 +17,54 @@ function formatPhoneNumber(number) {
   return clean;
 }
 
-function formatInstagram(username) {
-  const value = String(username || '').trim();
+function formatInstagramLink(value) {
+  const raw = String(value || '').trim();
 
-  if (!value) return '-';
+  if (!raw) return '-';
 
-  const clean = value
+  const username = raw
     .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
     .replace(/^@/, '')
     .replace(/\/$/, '')
     .trim();
 
-  if (!clean) return '-';
+  if (!username) return '-';
 
-  return `@${clean}`;
+  return `https://www.instagram.com/${username}/`;
+}
+
+function extractAboutText(value) {
+  if (!value) return '';
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const text = extractAboutText(item);
+      if (text) return text;
+    }
+
+    return '';
+  }
+
+  if (typeof value === 'object') {
+    const possibleKeys = [
+      'status',
+      'text',
+      'about',
+      'description',
+      'message',
+    ];
+
+    for (const key of possibleKeys) {
+      const text = extractAboutText(value[key]);
+      if (text) return text;
+    }
+  }
+
+  return '';
 }
 
 async function getProfilePhotoUrl(sock, targetJid) {
@@ -44,12 +78,7 @@ async function getProfilePhotoUrl(sock, targetJid) {
 async function getWhatsappAbout(sock, targetJid) {
   try {
     const result = await sock.fetchStatus(targetJid);
-
-    if (Array.isArray(result)) {
-      return result[0]?.status || '';
-    }
-
-    return result?.status || '';
+    return extractAboutText(result);
   } catch (err) {
     return '';
   }
@@ -61,18 +90,21 @@ async function me(ctx) {
 
   const ownerJid = jid(config.ownerNumber);
   const photoUrl = await getProfilePhotoUrl(ctx.sock, ownerJid);
+
+  // About dari .env diprioritaskan.
+  // Kalau OWNER_ABOUT kosong, baru ambil dari About WhatsApp.
   const whatsappAbout = await getWhatsappAbout(ctx.sock, ownerJid);
 
   const name = config.ownerMentionName || 'Fauzy';
   const phone = formatPhoneNumber(config.ownerNumber);
-  const instagram = formatInstagram(config.ownerInstagram);
-  const about = whatsappAbout || config.ownerAbout || '-';
+  const instagramLink = formatInstagramLink(config.ownerInstagram);
+  const about = config.ownerAbout || whatsappAbout || '-';
 
   const caption = `👤 *PROFILE ${name.toUpperCase()}*
 
 *Nama:* ${name}
 *Nomor WhatsApp:* ${phone}
-*Instagram:* ${instagram}
+*Instagram:* ${instagramLink}
 *About:* ${about}
 
 ✨ Powered by ${config.botName}`;
