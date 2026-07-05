@@ -9,63 +9,75 @@ function parseQuery(argsText) {
     .trim();
 }
 
-function requestJson(url) {
+function requestJson(options, body) {
   return new Promise((resolve, reject) => {
-    https
-      .get(url, (res) => {
-        let data = '';
+    const req = https.request(options, (res) => {
+      let data = '';
 
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-              const message = json?.error?.message || `HTTP Error ${res.statusCode}`;
-              reject(new Error(message));
-              return;
-            }
-
-            resolve(json);
-          } catch (err) {
-            reject(new Error('Gagal membaca response dari Google API.'));
-          }
-        });
-      })
-      .on('error', (err) => {
-        reject(err);
+      res.on('data', (chunk) => {
+        data += chunk;
       });
+
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            const message =
+              json?.message ||
+              json?.error ||
+              json?.error?.message ||
+              `HTTP Error ${res.statusCode}`;
+
+            reject(new Error(String(message)));
+            return;
+          }
+
+          resolve(json);
+        } catch (err) {
+          reject(new Error('Gagal membaca response dari Serper API.'));
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    req.write(JSON.stringify(body));
+    req.end();
   });
 }
 
-function buildGoogleImageSearchUrl(query) {
-  const params = new URLSearchParams({
-    key: config.googleApiKey,
-    cx: config.googleCx,
+async function fetchSerperImages(query) {
+  const options = {
+    hostname: 'google.serper.dev',
+    path: '/images',
+    method: 'POST',
+    headers: {
+      'X-API-KEY': config.serperApiKey,
+      'Content-Type': 'application/json',
+    },
+  };
+
+  const body = {
     q: query,
-    searchType: 'image',
-    num: '3',
-    safe: 'active',
-  });
+    gl: 'id',
+    hl: 'id',
+    num: 10,
+  };
 
-  return `https://www.googleapis.com/customsearch/v1?${params.toString()}`;
-}
+  const data = await requestJson(options, body);
 
-async function fetchGoogleImages(query) {
-  const url = buildGoogleImageSearchUrl(query);
-  const data = await requestJson(url);
-
-  return (data?.items || [])
+  return (data?.images || [])
     .map((item) => ({
       title: item.title || '',
+      imageUrl: item.imageUrl || item.thumbnailUrl || '',
+      source: item.source || item.domain || item.link || '',
       link: item.link || '',
-      source: item.image?.contextLink || item.displayLink || '',
-      mime: item.mime || '',
     }))
-    .filter((item) => item.link);
+    .filter((item) => item.imageUrl)
+    .slice(0, 3);
 }
 
 async function googleimage(ctx) {
@@ -80,19 +92,19 @@ async function googleimage(ctx) {
     );
   }
 
-  if (!config.googleApiKey || !config.googleCx) {
+  if (!config.serperApiKey) {
     return ctx.reply(
-      `Google Image Search belum disetting.\n\nPastikan .env berisi:\nGOOGLE_API_KEY=isi_api_key\nGOOGLE_CX=isi_cx\n\nLalu restart bot:\npm2 restart wa-bot --update-env`
+      `Serper belum disetting.\n\nTambahkan ini di file .env:\nSERPER_API_KEY=isi_api_key_serper_kamu\n\nLalu restart bot:\npm2 restart wa-bot --update-env`
     );
   }
 
   let images = [];
 
   try {
-    images = await fetchGoogleImages(query);
+    images = await fetchSerperImages(query);
   } catch (err) {
     return ctx.reply(
-      `Gagal mencari gambar di Google.\n\nPenyebab:\n${err.message}`
+      `Gagal mencari gambar.\n\nPenyebab:\n${err.message}`
     );
   }
 
@@ -105,7 +117,7 @@ async function googleimage(ctx) {
   await ctx.reply(`🔎 Mengambil ${images.length} gambar teratas untuk: *${query}*`);
 
   for (const [index, image] of images.entries()) {
-    const caption = `🖼️ *Google Image ${index + 1}/${images.length}*
+    const caption = `🖼️ *Image ${index + 1}/${images.length}*
 
 *Query:* ${query}
 *Judul:* ${image.title || '-'}
@@ -115,14 +127,14 @@ async function googleimage(ctx) {
       await ctx.sock.sendMessage(
         ctx.from,
         {
-          image: { url: image.link },
+          image: { url: image.imageUrl },
           caption,
         },
         { quoted: ctx.msg }
       );
     } catch (err) {
       await ctx.reply(
-        `Gambar ${index + 1} gagal dikirim sebagai foto.\n\nLink gambar:\n${image.link}`
+        `Gambar ${index + 1} gagal dikirim sebagai foto.\n\nLink gambar:\n${image.imageUrl}`
       );
     }
   }

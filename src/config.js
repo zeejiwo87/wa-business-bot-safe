@@ -11,6 +11,7 @@ module.exports = {
 
   googleApiKey: process.env.GOOGLE_API_KEY || '',
   googleCx: process.env.GOOGLE_CX || '',
+  serperApiKey: process.env.SERPER_API_KEY || '',
 
   payment: {
     gopayNumber: process.env.GOPAY_NUMBER || '085876846768',
