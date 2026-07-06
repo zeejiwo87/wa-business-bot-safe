@@ -132,6 +132,7 @@ async function commandList(ctx) {
 • ${config.prefix}menu — tampilkan menu utama
 • ${config.prefix}help — tampilkan menu utama
 • ${config.prefix}command — tampilkan semua command
+• ${config.prefix}ping — cek latency, uptime, RAM, CPU, dan status server
 
 *MENU CUSTOMER*
 • ${config.prefix}catalog — daftar aplikasi premium
@@ -152,7 +153,8 @@ async function commandList(ctx) {
 *MENU BMKG*
 • ${config.prefix}gempa — tampilkan gempa terbaru, gempa dirasakan, dan gempa terkini BMKG
 • ${config.prefix}cuaca — prakiraan cuaca 3 hari untuk lokasi default
-• ${config.prefix}cuaca : Tamansari — prakiraan cuaca berdasarkan desa/kelurahan`;
+• ${config.prefix}cuaca : Tamansari — prakiraan cuaca berdasarkan desa/kelurahan
+• ${config.prefix}cuaca : 35.07.06.2012 — prakiraan cuaca berdasarkan kode ADM4 BMKG`;
 
   const ownerCommands = `
 
