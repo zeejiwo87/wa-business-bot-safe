@@ -91,8 +91,6 @@ async function me(ctx) {
   const ownerJid = jid(config.ownerNumber);
   const photoUrl = await getProfilePhotoUrl(ctx.sock, ownerJid);
 
-  // About dari .env diprioritaskan.
-  // Kalau OWNER_ABOUT kosong, baru ambil dari About WhatsApp.
   const whatsappAbout = await getWhatsappAbout(ctx.sock, ownerJid);
 
   const name = config.ownerMentionName || 'Fauzy';
@@ -132,6 +130,7 @@ async function commandList(ctx) {
 • ${config.prefix}menu — tampilkan menu utama
 • ${config.prefix}help — tampilkan menu utama
 • ${config.prefix}command — tampilkan semua command
+• ${config.prefix}commands — alias command
 • ${config.prefix}ping — cek latency, uptime, RAM, CPU, dan status server
 
 *MENU CUSTOMER*
@@ -149,6 +148,16 @@ async function commandList(ctx) {
 • ${config.prefix}order jasa | Makalah | detail tugas + deadline
 • ${config.prefix}status ORD-xxxx — cek status order
 • ${config.prefix}cancel ORD-xxxx — batalkan order
+
+*MENU AI*
+• ${config.prefix}balas <teks> — bantu buat balasan chat
+• ${config.prefix}maaf <masalah> — buat pesan minta maaf
+• ${config.prefix}romantis <tema> — buat pesan romantis untuk pasangan
+
+Contoh AI:
+• ${config.prefix}balas maaf kak barangnya belum ready, besok baru ada
+• ${config.prefix}maaf aku lupa balas chat dari kemarin
+• ${config.prefix}romantis buat pacar yang lagi capek kerja
 
 *MENU BMKG*
 • ${config.prefix}gempa — tampilkan gempa terbaru, gempa dirasakan, dan gempa terkini BMKG
@@ -168,6 +177,11 @@ async function commandList(ctx) {
 • ${config.prefix}admin stats — statistik order
 • ${config.prefix}setlog on — aktifkan audit log
 • ${config.prefix}setlog off — matikan audit log
+
+*MENU NO CALL*
+• ${config.prefix}nocall on — aktifkan tolak panggilan otomatis
+• ${config.prefix}nocall off — matikan tolak panggilan otomatis
+• ${config.prefix}nocall — cek status fitur No Call
 
 *MENU CUSTOM TEXT*
 • ${config.prefix}addtext love you : isi teks panjang — tambah custom text
@@ -195,6 +209,8 @@ async function commandList(ctx) {
 
 Catatan:
 • Command owner/admin hanya bisa digunakan oleh owner.
+• Fitur No Call hanya bisa diatur oleh owner/bot sendiri.
+• Fitur AI membutuhkan GROQ_API_KEY di file .env.
 • Fitur grup hanya aktif kalau sudah dinyalakan dengan ${config.prefix}grup on.
 • Custom text hanya bisa dipanggil oleh owner.
 • ${config.prefix}googleimage hanya bisa digunakan oleh owner.`;

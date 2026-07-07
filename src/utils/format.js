@@ -27,13 +27,25 @@ function makeOrderId() {
   return `ORD-${raw}`;
 }
 
+function unwrapMessage(message = {}) {
+  return (
+    message.ephemeralMessage?.message ||
+    message.viewOnceMessage?.message ||
+    message.viewOnceMessageV2?.message ||
+    message.documentWithCaptionMessage?.message ||
+    message
+  );
+}
+
 function pickText(msg) {
-  const m = msg.message || {};
+  const m = unwrapMessage(msg.message || {});
+
   return (
     m.conversation ||
     m.extendedTextMessage?.text ||
     m.imageMessage?.caption ||
     m.videoMessage?.caption ||
+    m.documentMessage?.caption ||
     ''
   ).trim();
 }
@@ -57,4 +69,5 @@ module.exports = {
   pickText,
   getSenderNumber,
   isOwner,
+  unwrapMessage,
 };

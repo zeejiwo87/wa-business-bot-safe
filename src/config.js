@@ -4,7 +4,7 @@ module.exports = {
   botName: process.env.BOT_NAME || 'Fauzy Store Bot',
   prefix: process.env.PREFIX || '.',
 
-  ownerNumber: (process.env.OWNER_NUMBER || '6285876846768').replace(/\D/g, ''),
+  ownerNumber: (process.env.OWNER_NUMBER || '6285708095749').replace(/\D/g, ''),
   ownerMentionName: process.env.OWNER_MENTION_NAME || 'Fauzy',
   ownerInstagram: process.env.OWNER_INSTAGRAM || '',
   ownerAbout: process.env.OWNER_ABOUT || '',

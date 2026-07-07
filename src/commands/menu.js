@@ -14,6 +14,21 @@ async function menu(ctx) {
 • ${config.prefix}status ORD-xxxx — cek status order
 • ${config.prefix}cancel ORD-xxxx — batalkan order
 
+*MENU AI*
+• ${config.prefix}balas <teks> — bantu buat balasan chat
+• ${config.prefix}maaf <masalah> — buat pesan minta maaf
+• ${config.prefix}romantis <tema> — buat pesan romantis untuk pasangan
+
+Contoh:
+• ${config.prefix}balas maaf kak barangnya belum ready, besok baru ada
+• ${config.prefix}maaf aku lupa balas chat dari kemarin
+• ${config.prefix}romantis buat pacar yang lagi capek kerja
+
+*MENU NO CALL*
+• ${config.prefix}nocall on — aktifkan tolak panggilan otomatis
+• ${config.prefix}nocall off — matikan tolak panggilan otomatis
+• ${config.prefix}nocall — cek status fitur No Call
+
 *MENU ADMIN*
 • ${config.prefix}admin orders
 • ${config.prefix}admin order ORD-xxxx
@@ -40,10 +55,18 @@ async function menu(ctx) {
 • ${config.prefix}grup off — matikan fitur otomatis di grup ini
 • ${config.prefix}grup status — cek status fitur grup
 
+*MENU LAINNYA*
+• ${config.prefix}ping — cek respon bot
+• ${config.prefix}me — cek profil pengguna
+• ${config.prefix}command — lihat daftar command
+• ${config.prefix}commands — lihat daftar command
+
 Catatan:
 • Fitur reset tidak menghapus session WhatsApp.
 • Bot tidak akan logout selama folder sessions tidak dihapus.
 • Fitur grup hanya aktif di grup yang kamu nyalakan dengan ${config.prefix}grup on.
+• Fitur No Call hanya menolak panggilan ketika ${config.prefix}nocall on.
+• Fitur AI membutuhkan GROQ_API_KEY di file .env.
 • Layanan asistensi tugas diarahkan untuk konsultasi, proofreading, formatting, desain, dan pendampingan.`;
 
   await ctx.reply(text);

@@ -5,7 +5,7 @@ const { jid, isOwner } = require('../utils/format');
 const pendingGroupTimers = new Map();
 
 const GROUP_NO_REPLY_DELAY_MS = 5 * 60 * 1000;
-const PRIVATE_WELCOME_RESET_MS = 5 * 60 * 60 * 1000;
+const PRIVATE_WELCOME_RESET_MS = 24 * 60 * 60 * 1000;
 
 function isGroup(chatJid) {
   return String(chatJid || '').endsWith('@g.us');
@@ -73,11 +73,16 @@ function getGroupMentions(msg) {
 }
 
 function groupFeatureEnabled(groupJid) {
-  const row = db.prepare(`
-    SELECT enabled FROM group_features WHERE group_jid = ?
-  `).get(groupJid);
+  try {
+    const row = db.prepare(`
+      SELECT enabled FROM group_features WHERE group_jid = ?
+    `).get(groupJid);
 
-  return row?.enabled === 1;
+    return Number(row?.enabled) === 1;
+  } catch (err) {
+    console.error('[GROUP FEATURE] Gagal cek fitur grup:', err.message);
+    return false;
+  }
 }
 
 function buildTargetNumbers(ctx) {
@@ -104,13 +109,10 @@ function mentionsEveryone(ctx) {
   const mentions = getMentionedJids(ctx.msg) || [];
   const groupMentions = getGroupMentions(ctx.msg) || [];
 
-  // Support tulisan @semua, @all, @everyone, @anggota
   const hasEveryoneText = /(^|\s)@(semua|all|everyone|anggota)\b/i.test(text);
 
-  // Support metadata mention grup dari WhatsApp/Baileys
   const hasGroupMentionMetadata = groupMentions.length > 0;
 
-  // Jaga-jaga kalau WhatsApp mengirim mention grup sebagai JID grup
   const mentionedGroupJid = mentions.some((mentionedJid) => {
     const value = String(mentionedJid || '');
     return value === ctx.from || value.endsWith('@g.us');
@@ -124,7 +126,6 @@ function mentionsTarget(ctx) {
   const mentions = getMentionedJids(ctx.msg) || [];
   const targetNumbers = buildTargetNumbers(ctx);
 
-  // Baru: kalau ada @semua / @all / @everyone, bot juga ikut merespon
   if (mentionsEveryone(ctx)) {
     return true;
   }
@@ -153,7 +154,6 @@ function mentionsTarget(ctx) {
     return true;
   }
 
-  // Support WhatsApp LID mention, contoh: @166615236763657
   const hasLidMention = mentions.some((mentionedJid) => {
     return String(mentionedJid || '').endsWith('@lid');
   });
@@ -208,7 +208,7 @@ function setPendingGroupTimer(ctx) {
         text: 'Sudah lihat chat tapi gak dibales nih? 😭',
       });
     } catch (err) {
-      console.error('Group no-reply reminder error:', err);
+      console.error('[GROUP NO REPLY] Reminder error:', err.message);
     } finally {
       pendingGroupTimers.delete(ctx.from);
     }
@@ -227,7 +227,6 @@ async function handleGroupFeatures(ctx) {
   const ownerName = config.ownerMentionName || 'Fauzy';
   const ownerMessage = isOwner(ctx.msg) || ctx.msg.key.fromMe;
 
-  // Kalau ada orang lain mention nomor bot/owner atau pakai mention semua (@semua/@all/@everyone)
   if (!ownerMessage && mentionsTarget(ctx)) {
     const senderJid = ctx.msg.key.participant || ctx.msg.participant || ctx.from;
     const senderLabel = normalizeNumber(senderJid) || 'there';
@@ -257,39 +256,46 @@ Please wait a bit, ${ownerName} will reply soon. Don’t run away yet hehe 🏃�
     return;
   }
 
-  // Kalau owner/bot kirim pesan di grup, lalu belum ada yang balas
   if (ownerMessage && !text.startsWith(config.prefix)) {
     setPendingGroupTimer(ctx);
     return;
   }
 
-  // Kalau ada orang lain chat setelah owner, timer dibatalkan
   if (!ownerMessage) {
     clearPendingGroupTimer(ctx.from);
   }
 }
 
 function shouldSendPrivateWelcome(chatJid) {
-  const row = db.prepare(`
-    SELECT last_sent_at FROM private_welcome_logs WHERE chat_jid = ?
-  `).get(chatJid);
+  try {
+    const row = db.prepare(`
+      SELECT last_sent_at FROM private_welcome_logs WHERE chat_jid = ?
+    `).get(chatJid);
 
-  const current = Date.now();
+    const current = Date.now();
 
-  if (!row) return true;
+    if (!row) return true;
 
-  return current - Number(row.last_sent_at) >= PRIVATE_WELCOME_RESET_MS;
+    return current - Number(row.last_sent_at) >= PRIVATE_WELCOME_RESET_MS;
+  } catch (err) {
+    console.error('[PRIVATE WELCOME] Gagal cek log welcome:', err.message);
+    return false;
+  }
 }
 
 function savePrivateWelcomeTime(chatJid) {
-  const current = Date.now();
+  try {
+    const current = Date.now();
 
-  db.prepare(`
-    INSERT INTO private_welcome_logs (chat_jid, last_sent_at)
-    VALUES (?, ?)
-    ON CONFLICT(chat_jid) DO UPDATE SET
-      last_sent_at = excluded.last_sent_at
-  `).run(chatJid, current);
+    db.prepare(`
+      INSERT INTO private_welcome_logs (chat_jid, last_sent_at)
+      VALUES (?, ?)
+      ON CONFLICT(chat_jid) DO UPDATE SET
+        last_sent_at = excluded.last_sent_at
+    `).run(chatJid, current);
+  } catch (err) {
+    console.error('[PRIVATE WELCOME] Gagal menyimpan waktu welcome:', err.message);
+  }
 }
 
 async function handlePrivateWelcome(ctx) {
