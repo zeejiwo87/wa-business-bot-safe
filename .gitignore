@@ -18,3 +18,8 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+.env
+sessions/
+node_modules/
+nocall.json
+sessions_backup_*/
