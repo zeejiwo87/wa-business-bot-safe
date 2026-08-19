@@ -3,11 +3,45 @@ const path = require('path');
 const config = require('../config');
 
 async function payment(ctx) {
-  const text = `💳 *PAYMENT METHOD*\n\n📱 *GOPAY*\n${config.payment.gopayNumber}\nA/N ${config.payment.gopayName}\n\n📲 *QRIS*\nTersedia, scan QRIS dari admin.\n\n━━━━━━━━━━━━━━━\n⚠️ Catatan:\n• Mohon kirim bukti pembayaran\n• Order diproses setelah pembayaran valid\n• No spam, cukup kirim bukti 1x`;
+  const text = `💳 *PAYMENT METHOD*
 
-  const qrisPath = path.join(__dirname, '..', '..', 'storage', 'qris', 'qris.png');
+📱 *GOPAY*
+${config.payment.gopayNumber}
+A/N ${config.payment.gopayName}
+
+🏦 *SEABANK*
+${config.payment.seabankNumber}
+A/N ${config.payment.seabankName}
+
+📲 *QRIS*
+Tersedia, silakan scan QRIS yang dikirim bersama pesan ini.
+
+━━━━━━━━━━━━━━━
+⚠️ *CATATAN*
+• Mohon kirim bukti pembayaran
+• Order diproses setelah pembayaran valid
+• Cukup kirim bukti pembayaran 1x`;
+
+  const qrisPath = path.join(
+    __dirname,
+    '..',
+    '..',
+    'storage',
+    'qris',
+    'qris.png'
+  );
+
   if (fs.existsSync(qrisPath)) {
-    await ctx.sock.sendMessage(ctx.from, { image: fs.readFileSync(qrisPath), caption: text }, { quoted: ctx.msg });
+    await ctx.sock.sendMessage(
+      ctx.from,
+      {
+        image: fs.readFileSync(qrisPath),
+        caption: text,
+      },
+      {
+        quoted: ctx.msg,
+      }
+    );
   } else {
     await ctx.reply(text);
   }

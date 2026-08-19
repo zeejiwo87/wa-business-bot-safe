@@ -1,25 +1,35 @@
+# Dependencies
 node_modules/
+
+# Environment / API keys
 .env
 
+# WhatsApp session
 sessions/
+sessions_backup_*/
 
+# Database SQLite
 database.sqlite
 database.sqlite-wal
 database.sqlite-shm
 
+# Temporary / generated storage
 storage/uploads/
 storage/deliveries/
+storage/antidelete-cache/
 
+# Local bot settings
+nocall.json
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Operating system files
 .DS_Store
 Thumbs.db
+
+# Editor / IDE
 .vscode/
 .idea/
-.env
-sessions/
-node_modules/
-nocall.json
-sessions_backup_*/

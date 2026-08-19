@@ -5,21 +5,22 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "check": "node --check src/index.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "latest",
-    "better-sqlite3": "latest",
-    "bmkg-wrapper": "^2.0.1",
-    "dotenv": "latest",
-    "moment-timezone": "latest",
-    "pino": "latest",
-    "qrcode-terminal": "latest"
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "better-sqlite3": "13.0.3",
+    "bmkg-wrapper": "2.0.1",
+    "dotenv": "17.4.2",
+    "moment-timezone": "0.6.3",
+    "pino": "10.3.1",
+    "qrcode-terminal": "0.12.0"
   },
   "devDependencies": {
-    "nodemon": "latest"
+    "nodemon": "3.1.14"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24 <25"
   }
 }
