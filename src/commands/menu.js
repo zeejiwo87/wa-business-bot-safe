@@ -66,7 +66,6 @@ Catatan:
 • Bot tidak akan logout selama folder sessions tidak dihapus.
 • Fitur grup hanya aktif di grup yang kamu nyalakan dengan ${config.prefix}grup on.
 • Fitur No Call hanya menolak panggilan ketika ${config.prefix}nocall on.
-• Fitur AI membutuhkan GROQ_API_KEY di file .env.
 • Layanan asistensi tugas diarahkan untuk konsultasi, proofreading, formatting, desain, dan pendampingan.`;
 
   await ctx.reply(text);

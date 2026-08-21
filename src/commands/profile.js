@@ -210,7 +210,6 @@ Contoh AI:
 Catatan:
 • Command owner/admin hanya bisa digunakan oleh owner.
 • Fitur No Call hanya bisa diatur oleh owner/bot sendiri.
-• Fitur AI membutuhkan GROQ_API_KEY di file .env.
 • Fitur grup hanya aktif kalau sudah dinyalakan dengan ${config.prefix}grup on.
 • Custom text hanya bisa dipanggil oleh owner.
 • ${config.prefix}googleimage hanya bisa digunakan oleh owner.`;
