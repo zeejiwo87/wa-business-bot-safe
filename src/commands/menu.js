@@ -1,74 +1,124 @@
 const config = require('../config');
+const {
+  isOwner,
+} = require('../utils/format');
+
+
+// ====================================================================
+// 📋 MENU UTAMA
+// ====================================================================
 
 async function menu(ctx) {
-  const text = `✨ *${config.botName}* ✨
+  const prefix =
+    config.prefix || '.';
 
-*MENU CUSTOMER*
-• ${config.prefix}catalog — daftar aplikasi premium
-• ${config.prefix}catalog canva — detail produk
-• ${config.prefix}jasa — daftar layanan asistensi tugas
-• ${config.prefix}jasa makalah — detail layanan
-• ${config.prefix}order premium | CANVA | 1 Tahun Member + Designer | email kamu
-• ${config.prefix}order jasa | Makalah | detail tugas + deadline
-• ${config.prefix}payment — metode pembayaran
-• ${config.prefix}status ORD-xxxx — cek status order
-• ${config.prefix}cancel ORD-xxxx — batalkan order
+  const botName =
+    config.botName ||
+    'Asistensi Tugas .ID';
 
-*MENU AI*
-• ${config.prefix}balas <teks> — bantu buat balasan chat
-• ${config.prefix}maaf <masalah> — buat pesan minta maaf
-• ${config.prefix}romantis <tema> — buat pesan romantis untuk pasangan
+  const owner =
+    isOwner(
+      ctx.msg
+    );
 
-Contoh:
-• ${config.prefix}balas maaf kak barangnya belum ready, besok baru ada
-• ${config.prefix}maaf aku lupa balas chat dari kemarin
-• ${config.prefix}romantis buat pacar yang lagi capek kerja
 
-*MENU NO CALL*
-• ${config.prefix}nocall on — aktifkan tolak panggilan otomatis
-• ${config.prefix}nocall off — matikan tolak panggilan otomatis
-• ${config.prefix}nocall — cek status fitur No Call
+  // ==================================================================
+  // 👤 MENU CUSTOMER
+  // ==================================================================
 
-*MENU ADMIN*
-• ${config.prefix}admin orders
-• ${config.prefix}admin order ORD-xxxx
-• ${config.prefix}admin status ORD-xxxx proses/selesai/batal/revisi
-• ${config.prefix}admin note ORD-xxxx catatan
-• ${config.prefix}admin stats
-• ${config.prefix}setlog on/off
+  if (!owner) {
+    const text = `✨ *${botName}* ✨
 
-*MENU PENYIMPANAN*
-• ${config.prefix}reset stats — cek penyimpanan bot
-• ${config.prefix}reset logs confirm — hapus audit log
-• ${config.prefix}reset uploads confirm — hapus file upload
-• ${config.prefix}reset deliveries confirm — hapus file delivery
-• ${config.prefix}reset orders confirm — hapus semua order
-• ${config.prefix}reset all confirm — reset data bot
+Selamat datang di layanan *Asistensi Tugas .ID*.
 
-*MENU EDIT HARGA*
-• ${config.prefix}edit harga canva — edit harga produk
-• ${config.prefix}edit harga netflix — edit harga produk lain
-• ${config.prefix}edit harga jasa makalah — edit harga jasa
+*INFORMASI*
+• ${prefix}payment — metode pembayaran
 
-*MENU GRUP*
-• ${config.prefix}grup on — aktifkan fitur otomatis di grup ini
-• ${config.prefix}grup off — matikan fitur otomatis di grup ini
-• ${config.prefix}grup status — cek status fitur grup
+*INFORMASI LAINNYA*
+• ${prefix}gempa — informasi gempa terbaru
+• ${prefix}cuaca — informasi cuaca
+• ${prefix}ping — cek respon bot
 
-*MENU LAINNYA*
-• ${config.prefix}ping — cek respon bot
-• ${config.prefix}me — cek profil pengguna
-• ${config.prefix}command — lihat daftar command
-• ${config.prefix}commands — lihat daftar command
+Untuk informasi produk premium, harga, ketersediaan, atau pemesanan, silakan hubungi admin.
 
-Catatan:
-• Fitur reset tidak menghapus session WhatsApp.
-• Bot tidak akan logout selama folder sessions tidak dihapus.
-• Fitur grup hanya aktif di grup yang kamu nyalakan dengan ${config.prefix}grup on.
-• Fitur No Call hanya menolak panggilan ketika ${config.prefix}nocall on.
-• Layanan asistensi tugas diarahkan untuk konsultasi, proofreading, formatting, desain, dan pendampingan.`;
+Terima kasih telah menghubungi *Asistensi Tugas .ID*.`;
 
-  await ctx.reply(text);
+    await ctx.reply(
+      text
+    );
+
+    return;
+  }
+
+
+  // ==================================================================
+  // 👑 MENU OWNER
+  // ==================================================================
+
+  const text = `✨ *${botName}* ✨
+👑 *OWNER MENU*
+
+*AI CUSTOMER SERVICE*
+• ${prefix}aion — aktifkan AI customer service
+• ${prefix}aioff — nonaktifkan AI customer service
+• ${prefix}aistatus — cek status AI
+
+Harga dan paket AI mengikuti:
+src/data/pricelist.txt
+
+*AI MANUAL*
+• ${prefix}balas <teks> — buat balasan WhatsApp
+• ${prefix}maaf <masalah> — buat pesan permintaan maaf
+• ${prefix}romantis <tema> — buat pesan romantis
+
+Command AI manual tetap dapat digunakan meskipun ${prefix}aioff.
+
+*PEMBAYARAN*
+• ${prefix}payment — tampilkan metode pembayaran
+
+*NO CALL*
+• ${prefix}nocall on — aktifkan penolakan panggilan
+• ${prefix}nocall off — nonaktifkan penolakan panggilan
+• ${prefix}nocall — cek status No Call
+
+*FITUR GRUP*
+• ${prefix}grup on — aktifkan bot di grup ini
+• ${prefix}grup off — nonaktifkan bot di grup ini
+• ${prefix}grup status — cek status bot di grup
+
+Saat ${prefix}grup off, bot tidak akan merespons pesan maupun command lain di grup tersebut.
+
+*CUSTOM TEXT*
+• ${prefix}addtext — tambah custom text
+• ${prefix}deltext — hapus custom text
+
+*UTILITAS*
+• ${prefix}googleimage — pencarian gambar
+• ${prefix}gempa — informasi gempa terbaru
+• ${prefix}cuaca — informasi cuaca
+• ${prefix}ping — cek respon bot
+• ${prefix}me — cek profil pengguna
+
+*LOG & PENYIMPANAN*
+• ${prefix}setlog on — aktifkan audit log
+• ${prefix}setlog off — nonaktifkan audit log
+• ${prefix}reset stats — cek penggunaan penyimpanan
+• ${prefix}reset logs confirm — hapus audit log
+• ${prefix}reset uploads confirm — hapus file upload
+• ${prefix}reset deliveries confirm — hapus file delivery
+
+*DAFTAR COMMAND*
+• ${prefix}command
+• ${prefix}commands`;
+
+  await ctx.reply(
+    text
+  );
 }
+
+
+// ====================================================================
+// EXPORT
+// ====================================================================
 
 module.exports = menu;

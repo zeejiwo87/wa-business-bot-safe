@@ -10,11 +10,8 @@ const pendingGroupTimers = new Map();
 // ====================================================================
 
 // Reminder grup jika chat owner belum dibalas
-const GROUP_NO_REPLY_DELAY_MS = 5 * 60 * 1000;
-
-// Welcome private maksimal 1x setiap 7 hari
-const PRIVATE_WELCOME_RESET_MS =
-  7 * 24 * 60 * 60 * 1000;
+const GROUP_NO_REPLY_DELAY_MS =
+  5 * 60 * 1000;
 
 
 // ====================================================================
@@ -22,7 +19,9 @@ const PRIVATE_WELCOME_RESET_MS =
 // ====================================================================
 
 function isGroup(chatJid) {
-  return String(chatJid || '').endsWith('@g.us');
+  return String(
+    chatJid || ''
+  ).endsWith('@g.us');
 }
 
 
@@ -155,11 +154,13 @@ function getContentMessage(msg) {
 // ====================================================================
 
 function getContextInfo(msg) {
-  const m =
+  const message =
     getContentMessage(msg);
 
   for (
-    const value of Object.values(m)
+    const value of Object.values(
+      message
+    )
   ) {
     if (
       value &&
@@ -208,7 +209,9 @@ function getGroupMentions(msg) {
 // 👥 CEK STATUS FITUR GRUP
 // ====================================================================
 
-function groupFeatureEnabled(groupJid) {
+function groupFeatureEnabled(
+  groupJid
+) {
   try {
     const row =
       db.prepare(`
@@ -220,12 +223,15 @@ function groupFeatureEnabled(groupJid) {
     return Number(
       row?.enabled
     ) === 1;
+
   } catch (err) {
     console.error(
       '[GROUP FEATURE] Gagal cek fitur grup:',
       err.message
     );
 
+    // Jika database bermasalah,
+    // anggap fitur grup tidak aktif.
     return false;
   }
 }
@@ -400,7 +406,9 @@ function mentionsTarget(ctx) {
 
 
   const hasNumericMentionText =
-    /@\d{8,}/.test(text);
+    /@\d{8,}/.test(
+      text
+    );
 
 
   if (
@@ -481,7 +489,9 @@ function clearPendingGroupTimer(
     );
 
   if (timer) {
-    clearTimeout(timer);
+    clearTimeout(
+      timer
+    );
 
     pendingGroupTimers.delete(
       groupJid
@@ -518,11 +528,13 @@ function setPendingGroupTimer(ctx) {
                 'Sudah lihat chat tapi gak dibales nih? 😭',
             }
           );
+
         } catch (err) {
           console.error(
             '[GROUP NO REPLY] Reminder error:',
             err.message
           );
+
         } finally {
           pendingGroupTimers.delete(
             ctx.from
@@ -543,12 +555,21 @@ function setPendingGroupTimer(ctx) {
 // 👥 FITUR OTOMATIS GRUP
 // ====================================================================
 
-async function handleGroupFeatures(ctx) {
+async function handleGroupFeatures(
+  ctx
+) {
   if (
-    !isGroup(ctx.from)
+    !isGroup(
+      ctx.from
+    )
   ) {
     return;
   }
+
+
+  // ==================================================================
+  // FITUR GRUP WAJIB AKTIF
+  // ==================================================================
 
   if (
     !groupFeatureEnabled(
@@ -576,7 +597,9 @@ async function handleGroupFeatures(ctx) {
 
 
   const ownerMessage =
-    isOwner(ctx.msg) ||
+    isOwner(
+      ctx.msg
+    ) ||
     Boolean(
       ctx.msg?.key?.fromMe
     );
@@ -588,7 +611,9 @@ async function handleGroupFeatures(ctx) {
 
   if (
     !ownerMessage &&
-    mentionsTarget(ctx)
+    mentionsTarget(
+      ctx
+    )
   ) {
     const senderJid =
       ctx.msg?.key?.participant ||
@@ -603,7 +628,9 @@ async function handleGroupFeatures(ctx) {
 
 
     const everyoneMentioned =
-      mentionsEveryone(ctx);
+      mentionsEveryone(
+        ctx
+      );
 
 
     const responseText =
@@ -651,7 +678,9 @@ Please wait a bit, ${ownerName} will reply soon. Don’t run away yet hehe 🏃�
       config.prefix
     )
   ) {
-    setPendingGroupTimer(ctx);
+    setPendingGroupTimer(
+      ctx
+    );
 
     return;
   }
@@ -670,77 +699,44 @@ Please wait a bit, ${ownerName} will reply soon. Don’t run away yet hehe 🏃�
 
 
 // ====================================================================
-// 👋 CEK APAKAH WELCOME HARUS DIKIRIM
+// 👋 CEK APAKAH NOMOR SUDAH PERNAH MENERIMA WELCOME
 //
-// RETURN:
-// {
-//   shouldSend: true/false,
-//   isNew: true/false
-// }
+// Welcome hanya dikirim SATU KALI.
+//
+// Jika chat_jid sudah ada di private_welcome_logs,
+// bot tidak akan mengirim welcome lagi.
+//
+// Tidak ada reset 7 hari.
+// Tidak ada welcome mingguan.
 // ====================================================================
 
-function getPrivateWelcomeStatus(
+function shouldSendPrivateWelcome(
   chatJid
 ) {
   try {
     const row =
       db.prepare(`
-        SELECT last_sent_at
+        SELECT chat_jid
         FROM private_welcome_logs
         WHERE chat_jid = ?
+        LIMIT 1
       `).get(chatJid);
 
 
-    const current =
-      Date.now();
-
-
     // ================================================================
-    // NOMOR BARU / BELUM PERNAH TERCATAT
+    // BELUM PERNAH TERCATAT
     // ================================================================
 
     if (!row) {
-      return {
-        shouldSend: true,
-        isNew: true,
-      };
-    }
-
-
-    const lastSentAt =
-      Number(
-        row.last_sent_at
-      ) || 0;
-
-
-    const elapsed =
-      current -
-      lastSentAt;
-
-
-    // ================================================================
-    // SUDAH 7 HARI ATAU LEBIH
-    // ================================================================
-
-    if (
-      elapsed >=
-      PRIVATE_WELCOME_RESET_MS
-    ) {
-      return {
-        shouldSend: true,
-        isNew: false,
-      };
+      return true;
     }
 
 
     // ================================================================
-    // MASIH DALAM 7 HARI
+    // SUDAH PERNAH MENERIMA WELCOME
     // ================================================================
 
-    return {
-      shouldSend: false,
-      isNew: false,
-    };
+    return false;
 
   } catch (err) {
     console.error(
@@ -748,19 +744,18 @@ function getPrivateWelcomeStatus(
       err.message
     );
 
-    return {
-      shouldSend: false,
-      isNew: false,
-    };
+    // Jika database error, jangan kirim pesan.
+    // Mencegah welcome terkirim berulang-ulang.
+    return false;
   }
 }
 
 
 // ====================================================================
-// 💾 SIMPAN WAKTU WELCOME
+// 💾 SIMPAN STATUS WELCOME
 // ====================================================================
 
-function savePrivateWelcomeTime(
+function savePrivateWelcome(
   chatJid
 ) {
   try {
@@ -789,7 +784,7 @@ function savePrivateWelcomeTime(
 
   } catch (err) {
     console.error(
-      '[PRIVATE WELCOME] Gagal menyimpan waktu welcome:',
+      '[PRIVATE WELCOME] Gagal menyimpan log welcome:',
       err.message
     );
 
@@ -806,21 +801,24 @@ async function handlePrivateWelcome(
   ctx
 ) {
   // ==================================================================
-  // JANGAN DI GRUP
+  // JANGAN BERJALAN DI GRUP
   // ==================================================================
 
   if (
-    isGroup(ctx.from)
+    isGroup(
+      ctx.from
+    )
   ) {
     return;
   }
 
 
   // ==================================================================
-  // HARUS ADA PESAN
+  // HARUS ADA PESAN MASUK
   //
-  // Tidak wajib text.
-  // Jadi gambar, video, VN, sticker juga bisa memicu welcome pertama.
+  // Tidak harus berupa teks.
+  // Gambar, video, VN, dokumen, atau sticker tetap dapat menjadi
+  // pesan pertama yang memicu welcome.
   // ==================================================================
 
   if (
@@ -831,7 +829,7 @@ async function handlePrivateWelcome(
 
 
   // ==================================================================
-  // PESAN BOT / OWNER SENDIRI
+  // JANGAN BALAS PESAN YANG DIKIRIM BOT SENDIRI
   // ==================================================================
 
   if (
@@ -841,26 +839,30 @@ async function handlePrivateWelcome(
   }
 
 
+  // ==================================================================
+  // JANGAN KIRIM WELCOME KE OWNER
+  // ==================================================================
+
   if (
-    isOwner(ctx.msg)
+    isOwner(
+      ctx.msg
+    )
   ) {
     return;
   }
 
 
   // ==================================================================
-  // CEK STATUS WELCOME
+  // CEK APAKAH NOMOR SUDAH PERNAH MENERIMA WELCOME
   // ==================================================================
 
-  const welcomeStatus =
-    getPrivateWelcomeStatus(
+  const shouldSend =
+    shouldSendPrivateWelcome(
       ctx.from
     );
 
 
-  if (
-    !welcomeStatus.shouldSend
-  ) {
+  if (!shouldSend) {
     return;
   }
 
@@ -873,17 +875,17 @@ async function handlePrivateWelcome(
     await ctx.sock.sendMessage(
       ctx.from,
       {
-        text: `Halo 👋 Selamat datang di *Asistensi Tugas .ID*
+        text: `Halo 👋
 
-Ketik *.menu* untuk melihat menu pelanggan.
+Selamat datang di *Asistensi Tugas .ID*.
 
-Menu yang tersedia:
-• *.catalog* — daftar akun premium
-• *.jasa* — daftar layanan asistensi tugas
-• *.payment* — metode pembayaran
-• *.status ORD-xxxx* — cek status order
+Terima kasih telah menghubungi kami. Pesan Anda telah kami terima dan akan segera ditanggapi oleh admin.
 
-Silakan ketik *.menu* untuk mulai.`,
+Mohon menunggu beberapa saat hingga admin tersedia.
+
+Apabila dalam waktu *1 jam* Anda belum mendapatkan balasan, Anda dipersilakan melakukan panggilan WhatsApp agar pesan Anda dapat segera kami tindak lanjuti.
+
+Terima kasih atas kesabaran dan pengertiannya.`,
       },
       {
         quoted:
@@ -893,27 +895,18 @@ Silakan ketik *.menu* untuk mulai.`,
 
 
     // ================================================================
-    // SIMPAN WAKTU HANYA JIKA WELCOME BERHASIL DIKIRIM
+    // SIMPAN HANYA SETELAH PESAN BERHASIL DIKIRIM
     // ================================================================
 
-    savePrivateWelcomeTime(
+    savePrivateWelcome(
       ctx.from
     );
 
 
-    if (
-      welcomeStatus.isNew
-    ) {
-      console.log(
-        '[PRIVATE WELCOME] Welcome pertama dikirim ke:',
-        ctx.from
-      );
-    } else {
-      console.log(
-        '[PRIVATE WELCOME] Welcome mingguan dikirim ke:',
-        ctx.from
-      );
-    }
+    console.log(
+      '[PRIVATE WELCOME] Welcome pertama dikirim ke:',
+      ctx.from
+    );
 
   } catch (err) {
     console.error(
@@ -931,10 +924,14 @@ Silakan ketik *.menu* untuk mulai.`,
 async function handleAutoFeatures(
   ctx
 ) {
+  // Private welcome
   await handlePrivateWelcome(
     ctx
   );
 
+
+  // Fitur grup.
+  // Di router juga sudah dilindungi oleh .grup on/off.
   await handleGroupFeatures(
     ctx
   );

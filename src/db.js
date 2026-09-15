@@ -1,147 +1,210 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const products = require('./data/products');
-const services = require('./data/services');
-const { now } = require('./utils/format');
 
-const dbPath = path.join(__dirname, '..', 'database.sqlite');
-const db = new Database(dbPath);
+// ====================================================================
+// 🗃️ DATABASE PATH
+// ====================================================================
 
-db.pragma('journal_mode = WAL');
+const dbPath =
+  path.join(
+    __dirname,
+    '..',
+    'database.sqlite'
+  );
+
+
+const db =
+  new Database(
+    dbPath
+  );
+
+
+// ====================================================================
+// ⚙️ SQLITE CONFIG
+// ====================================================================
+
+// WAL lebih aman untuk bot yang sering baca/tulis database.
+db.pragma(
+  'journal_mode = WAL'
+);
+
+
+// Tunggu beberapa detik jika database sedang sibuk,
+// daripada langsung melempar SQLITE_BUSY.
+db.pragma(
+  'busy_timeout = 5000'
+);
+
+
+// Mode yang cukup aman sekaligus ringan.
+db.pragma(
+  'synchronous = NORMAL'
+);
+
+
+// ====================================================================
+// 🗃️ TABLE YANG MASIH DIGUNAKAN
+// ====================================================================
 
 db.exec(`
-CREATE TABLE IF NOT EXISTS products (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  key TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  category TEXT,
-  variants_json TEXT NOT NULL,
-  notes_json TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
 
-CREATE TABLE IF NOT EXISTS services (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  key TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  min_price INTEGER,
-  max_price INTEGER,
-  unit TEXT,
-  emoji TEXT,
-  notes_json TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
+  -- ================================================================
+  -- ⚙️ SETTING BOT
+  -- ================================================================
 
-CREATE TABLE IF NOT EXISTS orders (
-  id TEXT PRIMARY KEY,
-  user_jid TEXT NOT NULL,
-  user_number TEXT NOT NULL,
-  user_name TEXT,
-  order_type TEXT NOT NULL,
-  item_key TEXT,
-  item_name TEXT NOT NULL,
-  variant TEXT,
-  price INTEGER,
-  detail TEXT,
-  status TEXT NOT NULL DEFAULT 'pending',
-  admin_note TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
 
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  event_type TEXT NOT NULL,
-  user_jid TEXT,
-  user_number TEXT,
-  content TEXT,
-  created_at TEXT NOT NULL
-);
+  -- ================================================================
+  -- 📝 AUDIT LOG
+  -- ================================================================
 
-CREATE TABLE IF NOT EXISTS group_features (
-  group_jid TEXT PRIMARY KEY,
-  enabled INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-CREATE TABLE IF NOT EXISTS private_welcome_logs (
-  chat_jid TEXT PRIMARY KEY,
-  last_sent_at INTEGER NOT NULL
-);
+    event_type TEXT NOT NULL DEFAULT '',
+    user_jid TEXT NOT NULL DEFAULT '',
+    user_number TEXT NOT NULL DEFAULT '',
+    content TEXT NOT NULL DEFAULT '',
 
-CREATE TABLE IF NOT EXISTS custom_texts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  trigger_key TEXT UNIQUE NOT NULL,
-  trigger_text TEXT NOT NULL,
-  response_text TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
+    created_at TEXT NOT NULL
+  );
+
+
+  -- ================================================================
+  -- 👥 SETTING FITUR PER GRUP
+  --
+  -- .grup on
+  -- .grup off
+  -- .grup status
+  -- ================================================================
+
+  CREATE TABLE IF NOT EXISTS group_features (
+    group_jid TEXT PRIMARY KEY,
+
+    enabled INTEGER NOT NULL DEFAULT 0,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+
+  -- ================================================================
+  -- 👋 PRIVATE WELCOME
+  --
+  -- Menandai nomor yang SUDAH pernah mendapat welcome.
+  --
+  -- Jangan dihapus sembarangan karena customer lama akan dianggap
+  -- sebagai nomor baru jika data ini hilang.
+  -- ================================================================
+
+  CREATE TABLE IF NOT EXISTS private_welcome_logs (
+    chat_jid TEXT PRIMARY KEY,
+
+    last_sent_at INTEGER NOT NULL
+  );
+
+
+  -- ================================================================
+  -- 📝 CUSTOM TEXT
+  --
+  -- .addtext
+  -- .deltext
+  -- ================================================================
+
+  CREATE TABLE IF NOT EXISTS custom_texts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    trigger_key TEXT UNIQUE NOT NULL,
+    trigger_text TEXT NOT NULL,
+    response_text TEXT NOT NULL,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+
+  -- ================================================================
+  -- 🤖 AI SETTING
+  --
+  -- .aion
+  -- .aioff
+  -- .aistatus
+  -- ================================================================
+
+  CREATE TABLE IF NOT EXISTS ai_settings (
+    setting_key TEXT PRIMARY KEY,
+
+    setting_value TEXT NOT NULL
+  );
+
 `);
 
-/*
-  Penting:
-  DO NOTHING dipakai agar data produk/jasa yang sudah diedit lewat WhatsApp
-  tidak tertimpa lagi oleh file src/data/products.js dan src/data/services.js
-  setiap bot direstart.
-*/
 
-const insertProductIfNotExists = db.prepare(`
-INSERT INTO products (key, name, category, variants_json, notes_json, updated_at)
-VALUES (@key, @name, @category, @variants_json, @notes_json, @updated_at)
-ON CONFLICT(key) DO NOTHING
+// ====================================================================
+// 🚀 INDEX
+// ====================================================================
+
+// Mempercepat pembacaan audit log berdasarkan waktu.
+db.exec(`
+  CREATE INDEX IF NOT EXISTS
+  idx_audit_logs_created_at
+  ON audit_logs(created_at);
 `);
 
-const insertServiceIfNotExists = db.prepare(`
-INSERT INTO services (key, name, min_price, max_price, unit, emoji, notes_json, updated_at)
-VALUES (@key, @name, @min_price, @max_price, @unit, @emoji, @notes_json, @updated_at)
-ON CONFLICT(key) DO NOTHING
-`);
 
-function seed() {
-  const t = now();
+// ====================================================================
+// ⚙️ DEFAULT SETTINGS
+// ====================================================================
 
-  const tx = db.transaction(() => {
-    for (const p of products) {
-      insertProductIfNotExists.run({
-        key: p.key,
-        name: p.name,
-        category: p.category || null,
-        variants_json: JSON.stringify(p.variants || []),
-        notes_json: JSON.stringify(p.notes || []),
-        updated_at: t,
-      });
-    }
+// Nama key lama dipertahankan supaya kompatibel dengan router.js.
+// Walaupun namanya "log_order_messages", sekarang kegunaannya
+// adalah mengaktifkan / mematikan AUDIT LOG command secara umum.
 
-    for (const s of services) {
-      insertServiceIfNotExists.run({
-        key: s.key,
-        name: s.name,
-        min_price: s.min || null,
-        max_price: s.max || null,
-        unit: s.unit || null,
-        emoji: s.emoji || null,
-        notes_json: JSON.stringify(s.notes || []),
-        updated_at: t,
-      });
-    }
+db.prepare(`
+  INSERT OR IGNORE INTO settings (
+    key,
+    value
+  )
 
-    db.prepare(`
-      INSERT OR IGNORE INTO settings (key, value)
-      VALUES (?, ?)
-    `).run('log_order_messages', 'on');
-  });
+  VALUES (?, ?)
+`).run(
+  'log_order_messages',
+  'on'
+);
 
-  tx();
-}
 
-seed();
+// ====================================================================
+// 🤖 DEFAULT AUTO AI = OFF
+// ====================================================================
+
+// AI customer service otomatis harus OFF secara default.
+//
+// Baru aktif setelah owner:
+// .aion
+//
+// Menggunakan key baru yang sama dengan aiText.js:
+// premium_auto_ai_enabled
+
+db.prepare(`
+  INSERT OR IGNORE INTO ai_settings (
+    setting_key,
+    setting_value
+  )
+
+  VALUES (?, ?)
+`).run(
+  'premium_auto_ai_enabled',
+  '0'
+);
+
+
+// ====================================================================
+// EXPORT
+// ====================================================================
 
 module.exports = db;

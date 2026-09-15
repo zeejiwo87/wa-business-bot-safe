@@ -9,7 +9,9 @@ const handledRevokeKeys = new Set();
 // ====================================================================
 
 function isGroup(chatJid) {
-  return String(chatJid || '').endsWith('@g.us');
+  return String(
+    chatJid || ''
+  ).endsWith('@g.us');
 }
 
 
@@ -19,14 +21,21 @@ function isGroup(chatJid) {
 
 function groupFeatureEnabled(groupJid) {
   try {
-    const row = db.prepare(`
-      SELECT enabled
-      FROM group_features
-      WHERE group_jid = ?
-    `).get(groupJid);
+    const row =
+      db.prepare(`
+        SELECT enabled
+        FROM group_features
+        WHERE group_jid = ?
+      `).get(
+        groupJid
+      );
 
-    return Number(row?.enabled) === 1;
+    return Number(
+      row?.enabled
+    ) === 1;
+
   } catch (err) {
+
     console.error(
       '[PRIVACY GUARD] Gagal cek fitur grup:',
       err.message
@@ -42,9 +51,15 @@ function groupFeatureEnabled(groupJid) {
 // ====================================================================
 
 function cleanNumber(jidValue) {
-  const stringJid = String(jidValue || '');
+  const stringJid =
+    String(
+      jidValue || ''
+    );
 
-  const match = stringJid.match(/^(\d+)/);
+  const match =
+    stringJid.match(
+      /^(\d+)/
+    );
 
   return match
     ? match[1]
@@ -56,7 +71,10 @@ function cleanNumber(jidValue) {
 // 🔑 KEY MESSAGE STORE
 // ====================================================================
 
-function makeStoreKey(remoteJid, messageId) {
+function makeStoreKey(
+  remoteJid,
+  messageId
+) {
   return `${remoteJid || ''}:${messageId || ''}`;
 }
 
@@ -66,44 +84,77 @@ function makeStoreKey(remoteJid, messageId) {
 // ====================================================================
 
 function unwrapMessage(message = {}) {
-  let current = message;
+  let current =
+    message;
 
   while (
     current &&
     typeof current === 'object'
   ) {
-    if (current.ephemeralMessage?.message) {
-      current = current.ephemeralMessage.message;
+
+    if (
+      current.ephemeralMessage?.message
+    ) {
+      current =
+        current.ephemeralMessage.message;
+
       continue;
     }
 
-    if (current.documentWithCaptionMessage?.message) {
-      current = current.documentWithCaptionMessage.message;
+
+    if (
+      current.documentWithCaptionMessage?.message
+    ) {
+      current =
+        current.documentWithCaptionMessage.message;
+
       continue;
     }
 
-    if (current.editedMessage?.message) {
-      current = current.editedMessage.message;
+
+    if (
+      current.editedMessage?.message
+    ) {
+      current =
+        current.editedMessage.message;
+
       continue;
     }
 
-    if (current.viewOnceMessage?.message) {
-      current = current.viewOnceMessage.message;
+
+    if (
+      current.viewOnceMessage?.message
+    ) {
+      current =
+        current.viewOnceMessage.message;
+
       continue;
     }
 
-    if (current.viewOnceMessageV2?.message) {
-      current = current.viewOnceMessageV2.message;
+
+    if (
+      current.viewOnceMessageV2?.message
+    ) {
+      current =
+        current.viewOnceMessageV2.message;
+
       continue;
     }
 
-    if (current.viewOnceMessageV2Extension?.message) {
-      current = current.viewOnceMessageV2Extension.message;
+
+    if (
+      current.viewOnceMessageV2Extension?.message
+    ) {
+      current =
+        current.viewOnceMessageV2Extension.message;
+
       continue;
     }
+
 
     break;
   }
+
 
   return current || {};
 }
@@ -119,10 +170,17 @@ function getProtocolMessage(item) {
     item?.message ||
     {};
 
-  const realMessage =
-    unwrapMessage(message);
 
-  return realMessage?.protocolMessage || null;
+  const realMessage =
+    unwrapMessage(
+      message
+    );
+
+
+  return (
+    realMessage?.protocolMessage ||
+    null
+  );
 }
 
 
@@ -157,20 +215,33 @@ function isViewOnceMessage(message) {
     return false;
   }
 
-  let current = message;
 
-  const visited = new Set();
+  let current =
+    message;
+
+
+  const visited =
+    new Set();
+
 
   while (
     current &&
     typeof current === 'object'
   ) {
+
     // Perlindungan jika ada object circular
-    if (visited.has(current)) {
+    if (
+      visited.has(
+        current
+      )
+    ) {
       return false;
     }
 
-    visited.add(current);
+
+    visited.add(
+      current
+    );
 
 
     // ================================================================
@@ -235,6 +306,7 @@ function isViewOnceMessage(message) {
     break;
   }
 
+
   return false;
 }
 
@@ -248,20 +320,28 @@ function getMediaLabel(media) {
     return 'Media';
   }
 
-  switch (media.type) {
+
+  switch (
+    media.type
+  ) {
+
     case 'image':
       return 'Gambar';
 
+
     case 'video':
       return 'Video';
+
 
     case 'audio':
       return media.ptt
         ? 'Voice Note'
         : 'Audio';
 
+
     case 'sticker':
       return 'Sticker';
+
 
     default:
       return 'Media';
@@ -278,18 +358,26 @@ function getMediaIcon(media) {
     return '📎';
   }
 
-  switch (media.type) {
+
+  switch (
+    media.type
+  ) {
+
     case 'image':
       return '🖼️';
+
 
     case 'video':
       return '🎥';
 
+
     case 'audio':
       return '🎙️';
 
+
     case 'sticker':
       return '🏷️';
+
 
     default:
       return '📎';
@@ -303,16 +391,22 @@ function getMediaIcon(media) {
 
 function buildHeader(savedMsg) {
   const senderPureNumber =
-    cleanNumber(savedMsg.sender);
+    cleanNumber(
+      savedMsg.sender
+    );
+
 
   let text =
     `⚠️ *Pesan Dihapus Terdeteksi!* ⚠️\n\n`;
 
+
   text +=
     `👤 *Pengirim:* @${senderPureNumber}\n`;
 
+
   text +=
     `🕒 *Waktu Kirim:* ${savedMsg.time || '-'}`;
+
 
   return text;
 }
@@ -324,14 +418,19 @@ function buildHeader(savedMsg) {
 
 function buildTextResponse(savedMsg) {
   let text =
-    buildHeader(savedMsg);
+    buildHeader(
+      savedMsg
+    );
+
 
   text +=
     `\n\n📄 *Isi Pesan yang Dihapus:*\n`;
 
+
   text +=
     savedMsg.text ||
     '(Pesan kosong)';
+
 
   return text;
 }
@@ -345,17 +444,28 @@ function buildMediaCaption(savedMsg) {
   const media =
     savedMsg.media;
 
+
   const mediaLabel =
-    getMediaLabel(media);
+    getMediaLabel(
+      media
+    );
+
 
   const mediaIcon =
-    getMediaIcon(media);
+    getMediaIcon(
+      media
+    );
+
 
   let text =
-    buildHeader(savedMsg);
+    buildHeader(
+      savedMsg
+    );
+
 
   text +=
     `\n\n${mediaIcon} *Media yang Dihapus:* ${mediaLabel}`;
+
 
   const originalCaption =
     String(
@@ -364,10 +474,14 @@ function buildMediaCaption(savedMsg) {
       ''
     ).trim();
 
-  if (originalCaption) {
+
+  if (
+    originalCaption
+  ) {
     text +=
       `\n\n📝 *Caption:*\n${originalCaption}`;
   }
+
 
   return text;
 }
@@ -383,28 +497,41 @@ async function removeSavedMessageFromCache(
   targetId,
   savedMsg
 ) {
-  messageStore.delete(storeKey);
-  messageStore.delete(targetId);
+  messageStore.delete(
+    storeKey
+  );
+
+
+  messageStore.delete(
+    targetId
+  );
+
 
   const mediaPath =
     savedMsg?.media?.path;
+
 
   if (!mediaPath) {
     return;
   }
 
+
   try {
+
     await fs.promises.rm(
       mediaPath,
       {
         force: true,
       }
     );
+
   } catch (err) {
+
     console.error(
       '[PRIVACY GUARD] Gagal hapus media cache:',
       err.message
     );
+
   }
 }
 
@@ -422,22 +549,31 @@ async function sendRestoredMedia(
   const media =
     savedMsg.media;
 
-  if (!media?.path) {
+
+  if (
+    !media?.path
+  ) {
     throw new Error(
       'Path media cache tidak tersedia.'
     );
   }
 
+
   if (
-    !fs.existsSync(media.path)
+    !fs.existsSync(
+      media.path
+    )
   ) {
     throw new Error(
       `File media cache tidak ditemukan: ${media.path}`
     );
   }
 
+
   const notificationText =
-    buildMediaCaption(savedMsg);
+    buildMediaCaption(
+      savedMsg
+    );
 
 
   // ==================================================================
@@ -447,11 +583,13 @@ async function sendRestoredMedia(
   if (
     media.type === 'image'
   ) {
+
     return sock.sendMessage(
       sendTo,
       {
         image: {
-          url: media.path,
+          url:
+            media.path,
         },
 
         caption:
@@ -460,6 +598,7 @@ async function sendRestoredMedia(
         mentions,
       }
     );
+
   }
 
 
@@ -470,11 +609,13 @@ async function sendRestoredMedia(
   if (
     media.type === 'video'
   ) {
+
     return sock.sendMessage(
       sendTo,
       {
         video: {
-          url: media.path,
+          url:
+            media.path,
         },
 
         caption:
@@ -487,6 +628,7 @@ async function sendRestoredMedia(
         mentions,
       }
     );
+
   }
 
 
@@ -497,6 +639,7 @@ async function sendRestoredMedia(
   if (
     media.type === 'audio'
   ) {
+
     // Audio/VN tidak memiliki caption,
     // jadi informasi dikirim dahulu.
 
@@ -515,7 +658,8 @@ async function sendRestoredMedia(
       sendTo,
       {
         audio: {
-          url: media.path,
+          url:
+            media.path,
         },
 
         mimetype:
@@ -523,9 +667,12 @@ async function sendRestoredMedia(
           'audio/ogg; codecs=opus',
 
         ptt:
-          Boolean(media.ptt),
+          Boolean(
+            media.ptt
+          ),
       }
     );
+
   }
 
 
@@ -536,6 +683,7 @@ async function sendRestoredMedia(
   if (
     media.type === 'sticker'
   ) {
+
     // Sticker tidak memiliki caption,
     // jadi informasi dikirim dahulu.
 
@@ -554,10 +702,12 @@ async function sendRestoredMedia(
       sendTo,
       {
         sticker: {
-          url: media.path,
+          url:
+            media.path,
         },
       }
     );
+
   }
 
 
@@ -576,15 +726,22 @@ async function handleRevokeMessage(
   update,
   messageStore
 ) {
+
   for (
-    const item of update || []
+    const item
+    of update || []
   ) {
+
     const protocolMsg =
-      getProtocolMessage(item);
+      getProtocolMessage(
+        item
+      );
 
 
     // Tidak ada protocol message
-    if (!protocolMsg) {
+    if (
+      !protocolMsg
+    ) {
       continue;
     }
 
@@ -600,11 +757,14 @@ async function handleRevokeMessage(
 
     /*
       Protocol WhatsApp tidak hanya revoke.
+
       Type 5, 6, 9, 17 dan sebagainya
-      cukup dilewati tanpa memenuhi terminal.
+      dilewati.
     */
 
-    if (!isRevoke) {
+    if (
+      !isRevoke
+    ) {
       continue;
     }
 
@@ -614,13 +774,18 @@ async function handleRevokeMessage(
     // ==================================================================
 
     const outerKey =
-      getOuterKey(item);
+      getOuterKey(
+        item
+      );
+
 
     const targetKey =
       protocolMsg.key || {};
 
+
     const targetId =
       targetKey.id;
+
 
     const from =
       targetKey.remoteJid ||
@@ -631,6 +796,7 @@ async function handleRevokeMessage(
       !targetId ||
       !from
     ) {
+
       console.log(
         '[PRIVACY GUARD] Target revoke tidak lengkap:',
         {
@@ -638,6 +804,7 @@ async function handleRevokeMessage(
           from,
         }
       );
+
 
       continue;
     }
@@ -661,24 +828,34 @@ async function handleRevokeMessage(
 
 
     const savedMsg =
-      messageStore.get(storeKey) ||
-      messageStore.get(targetId);
+      messageStore.get(
+        storeKey
+      ) ||
+      messageStore.get(
+        targetId
+      );
 
 
-    if (!savedMsg) {
+    if (
+      !savedMsg
+    ) {
+
       console.log(
         '[PRIVACY GUARD] Pesan asli tidak ditemukan di cache.'
       );
+
 
       console.log(
         '[PRIVACY GUARD] targetId:',
         targetId
       );
 
+
       console.log(
         '[PRIVACY GUARD] from:',
         from
       );
+
 
       continue;
     }
@@ -686,18 +863,28 @@ async function handleRevokeMessage(
 
     // ==================================================================
     // 🔒 VIEW ONCE
+    //
+    // Gunakan CONTINUE, bukan RETURN.
+    //
+    // Kalau ada beberapa revoke dalam satu event,
+    // View Once hanya melewati item tersebut,
+    // bukan menghentikan seluruh proses.
     // ==================================================================
 
     if (
       isViewOnceMessage(
-        savedMsg?.rawMsg?.message
+        savedMsg
+          ?.rawMsg
+          ?.message
       )
     ) {
+
       console.log(
         '[PRIVACY GUARD] View Once dilewati.'
       );
 
-      return;
+
+      continue;
     }
 
 
@@ -706,13 +893,19 @@ async function handleRevokeMessage(
     // ==================================================================
 
     if (
-      isGroup(from) &&
-      !groupFeatureEnabled(from)
+      isGroup(
+        from
+      ) &&
+      !groupFeatureEnabled(
+        from
+      )
     ) {
+
       console.log(
         '[PRIVACY GUARD] Grup belum .grup on, dilewati:',
         from
       );
+
 
       continue;
     }
@@ -725,9 +918,11 @@ async function handleRevokeMessage(
     if (
       savedMsg.fromMe
     ) {
+
       console.log(
         '[PRIVACY GUARD] Pesan sendiri dihapus, dilewati.'
       );
+
 
       continue;
     }
@@ -745,12 +940,16 @@ async function handleRevokeMessage(
 
 
     if (
-      handledRevokeKeys.has(revokeKey)
+      handledRevokeKeys.has(
+        revokeKey
+      )
     ) {
+
       console.log(
         '[PRIVACY GUARD] Revoke sudah diproses:',
         revokeKey
       );
+
 
       continue;
     }
@@ -764,9 +963,11 @@ async function handleRevokeMessage(
     const handledTimer =
       setTimeout(
         () => {
+
           handledRevokeKeys.delete(
             revokeKey
           );
+
         },
         60 * 1000
       );
@@ -783,7 +984,9 @@ async function handleRevokeMessage(
 
     const mentions =
       savedMsg.sender
-        ? [savedMsg.sender]
+        ? [
+            savedMsg.sender,
+          ]
         : [];
 
 
@@ -792,6 +995,7 @@ async function handleRevokeMessage(
     // ==================================================================
 
     try {
+
       let sent;
 
 
@@ -802,6 +1006,7 @@ async function handleRevokeMessage(
       if (
         savedMsg.media?.path
       ) {
+
         sent =
           await sendRestoredMedia(
             sock,
@@ -817,6 +1022,7 @@ async function handleRevokeMessage(
             savedMsg.media
           )
         );
+
       }
 
 
@@ -825,6 +1031,7 @@ async function handleRevokeMessage(
       // ================================================================
 
       else {
+
         const responseText =
           buildTextResponse(
             savedMsg
@@ -846,6 +1053,7 @@ async function handleRevokeMessage(
         console.log(
           '[PRIVACY GUARD] Pesan teks berhasil dipulihkan.'
         );
+
       }
 
 
@@ -874,6 +1082,7 @@ async function handleRevokeMessage(
 
 
     } catch (err) {
+
       console.error(
         '[PRIVACY GUARD] Gagal memulihkan pesan:',
         err
@@ -898,7 +1107,9 @@ async function handleRevokeMessage(
         savedMsg.media?.path &&
         savedMsg.text
       ) {
+
         try {
+
           const fallbackText =
             buildTextResponse(
               savedMsg
@@ -915,11 +1126,14 @@ async function handleRevokeMessage(
             }
           );
 
+
         } catch (fallbackErr) {
+
           console.error(
             '[PRIVACY GUARD] Fallback text gagal:',
             fallbackErr
           );
+
         }
       }
     }

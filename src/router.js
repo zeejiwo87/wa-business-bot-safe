@@ -1,4 +1,6 @@
 const config = require('./config');
+const db = require('./db');
+
 const {
   pickText,
   jid,
@@ -7,29 +9,13 @@ const {
 } = require('./utils/format');
 
 const menu = require('./commands/menu');
-const catalog = require('./commands/catalog');
-const jasa = require('./commands/jasa');
 const payment = require('./commands/payment');
 
 const {
-  order,
-  status,
-  cancel,
-} = require('./commands/order');
-
-const {
-  admin,
   setlog,
 } = require('./commands/admin');
 
 const reset = require('./commands/reset');
-
-const {
-  handlePendingEdit,
-} = require('./commands/edit');
-
-const edit = require('./commands/edit');
-
 const grup = require('./commands/grup');
 
 const {
@@ -78,25 +64,11 @@ const commands = {
   gempa,
   cuaca,
 
-  catalog,
-  katalog: catalog,
-  premium: catalog,
-
-  jasa,
-  tugas: jasa,
-  joki: jasa,
-
   payment,
   bayar: payment,
 
-  order,
-  status,
-  cancel,
-
-  admin,
   setlog,
   reset,
-  edit,
 
   grup,
   group: grup,
@@ -118,6 +90,106 @@ function isGroupJid(jidValue) {
 
 
 // ====================================================================
+// 👥 CEK STATUS FITUR GRUP
+// ====================================================================
+
+function groupFeatureEnabled(groupJid) {
+  try {
+    const row = db.prepare(`
+      SELECT enabled
+      FROM group_features
+      WHERE group_jid = ?
+    `).get(groupJid);
+
+    return Number(
+      row?.enabled
+    ) === 1;
+  } catch (err) {
+    console.error(
+      '[GROUP FEATURE CHECK ERROR]',
+      err.message
+    );
+
+    // Kalau database error, anggap fitur grup mati.
+    // Ini lebih aman agar bot tidak tiba-tiba aktif di grup.
+    return false;
+  }
+}
+
+
+// ====================================================================
+// 🔍 AMBIL NAMA COMMAND DARI TEKS
+// ====================================================================
+
+function getCommandName(commandText) {
+  const raw = String(
+    commandText || ''
+  ).trim();
+
+  if (
+    !raw.startsWith(
+      config.prefix
+    )
+  ) {
+    return '';
+  }
+
+  const body = raw
+    .slice(config.prefix.length)
+    .trim();
+
+  if (!body) {
+    return '';
+  }
+
+  return String(
+    body.split(/\s+/)[0] || ''
+  ).toLowerCase();
+}
+
+
+// ====================================================================
+// 🔐 COMMAND YANG BOLEH LEWAT SAAT FITUR GRUP MATI
+//
+// Ketika .grup OFF:
+//
+// Semua pesan di grup diabaikan.
+//
+// Pengecualian:
+// owner / akun bot sendiri tetap boleh memakai:
+//
+// .grup on
+// .grup off
+// .grup status
+// .group ...
+//
+// Ini diperlukan agar fitur grup bisa dihidupkan kembali.
+// ====================================================================
+
+function isAllowedGroupControl(
+  msg,
+  commandText
+) {
+  if (
+    !isOwner(msg) &&
+    !msg?.key?.fromMe
+  ) {
+    return false;
+  }
+
+  const cmd =
+    getCommandName(
+      commandText
+    );
+
+  return (
+    cmd === 'grup' ||
+    cmd === 'group'
+  );
+}
+
+
+// ====================================================================
 // 🚦 ROUTER UTAMA
 // ====================================================================
 
@@ -135,6 +207,12 @@ async function route(sock, msg) {
   if (!from) {
     return;
   }
+
+  const isGroup =
+    isGroupJid(from);
+
+  const commandTextRaw =
+    text.trim();
 
 
   // ==================================================================
@@ -176,7 +254,7 @@ async function route(sock, msg) {
   // 👥 DEBUG PESAN GRUP
   // ==================================================================
 
-  if (isGroupJid(from)) {
+  if (isGroup) {
     console.log(
       '[GROUP IN]',
       {
@@ -197,57 +275,73 @@ async function route(sock, msg) {
 
 
   // ==================================================================
-  // ⚙️ FITUR OTOMATIS
+  // 🔒 PENGAMAN GRUP
   //
-  // 1. Auto reply ketika bot/owner ditag di grup aktif
-  // 2. Reminder pesan owner di grup
-  // 3. Welcome private chat
+  // Jika .grup OFF:
+  //
+  // ❌ jangan jalankan auto feature
+  // ❌ jangan balas "menu"
+  // ❌ jangan balas "help"
+  // ❌ jangan jalankan .menu
+  // ❌ jangan jalankan command lain
+  // ❌ jangan jalankan custom text
+  //
+  // ✅ owner tetap boleh:
+  //    .grup on
+  //    .grup off
+  //    .grup status
   // ==================================================================
 
-  try {
-    await handleAutoFeatures(
-      ctx
-    );
-  } catch (err) {
-    console.error(
-      '[AUTO FEATURE ERROR]',
-      err
-    );
+  let isGroupEnabled = false;
+
+  if (isGroup) {
+    isGroupEnabled =
+      groupFeatureEnabled(
+        from
+      );
+
+    if (
+      !isGroupEnabled &&
+      !isAllowedGroupControl(
+        msg,
+        commandTextRaw
+      )
+    ) {
+      return;
+    }
   }
 
 
   // ==================================================================
-  // ✏️ EDIT INTERAKTIF
+  // ⚙️ FITUR OTOMATIS
   //
-  // Contoh:
-  // .edit harga canva
-  // kemudian owner membalas:
-  // 1 7000
+  // PRIVATE:
+  // - welcome private chat
+  //
+  // GRUP:
+  // - hanya berjalan jika .grup ON
   // ==================================================================
 
-  try {
-    const pendingHandled =
-      await handlePendingEdit(
+  if (
+    !isGroup ||
+    isGroupEnabled
+  ) {
+    try {
+      await handleAutoFeatures(
         ctx
       );
-
-    if (pendingHandled) {
-      return;
+    } catch (err) {
+      console.error(
+        '[AUTO FEATURE ERROR]',
+        err
+      );
     }
-  } catch (err) {
-    console.error(
-      '[PENDING EDIT ERROR]',
-      err
-    );
   }
 
 
   // ==================================================================
   // 📝 AMBIL COMMAND
   // ==================================================================
-
-  const commandTextRaw =
-    text.trim();
 
   if (!commandTextRaw) {
     return;
@@ -259,6 +353,17 @@ async function route(sock, msg) {
 
   // ==================================================================
   // 📋 SUPPORT "menu" / "help" TANPA PREFIX
+  //
+  // PRIVATE:
+  // menu  → .menu
+  // help  → .help
+  //
+  // GRUP + .grup ON:
+  // menu  → .menu
+  // help  → .help
+  //
+  // GRUP + .grup OFF:
+  // sudah dihentikan oleh pengaman grup di atas
   // ==================================================================
 
   if (
@@ -279,7 +384,12 @@ async function route(sock, msg) {
     } else {
 
       // ==============================================================
-      // Custom text hanya bisa dipanggil owner
+      // CUSTOM TEXT
+      //
+      // Hanya owner yang boleh memanggil custom text.
+      //
+      // Jika berada di grup, bagian ini hanya bisa tercapai
+      // apabila .grup ON.
       // ==============================================================
 
       if (

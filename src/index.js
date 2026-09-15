@@ -17,7 +17,11 @@ const { pipeline } = require('stream/promises');
 
 const route = require('./router');
 const config = require('./config');
-const { pickText } = require('./utils/format');
+
+const {
+  pickText,
+  isOwner,
+} = require('./utils/format');
 
 const {
   handleRevokeMessage,
@@ -33,17 +37,142 @@ const {
   handleAITextCommand,
 } = require('./modules/aiText');
 
-require('./db');
+const db = require('./db');
+
+
+// ====================================================================
+// 👥 PENGAMAN FITUR GRUP
+// ====================================================================
+
+function isGroupJid(jidValue) {
+  return String(
+    jidValue || ''
+  ).endsWith('@g.us');
+}
+
+
+function groupFeatureEnabled(groupJid) {
+  try {
+    const row =
+      db.prepare(`
+        SELECT enabled
+        FROM group_features
+        WHERE group_jid = ?
+      `).get(
+        groupJid
+      );
+
+    return Number(
+      row?.enabled
+    ) === 1;
+
+  } catch (err) {
+    console.error(
+      '[INDEX GROUP FEATURE CHECK ERROR]',
+      err.message
+    );
+
+    return false;
+  }
+}
+
+
+function isAllowedGroupControl(
+  msg,
+  text
+) {
+  if (
+    !isOwner(msg) &&
+    !msg?.key?.fromMe
+  ) {
+    return false;
+  }
+
+
+  const prefix =
+    config.prefix || '.';
+
+
+  const raw =
+    String(
+      text || ''
+    ).trim();
+
+
+  if (
+    !raw.startsWith(
+      prefix
+    )
+  ) {
+    return false;
+  }
+
+
+  const commandBody =
+    raw
+      .slice(
+        prefix.length
+      )
+      .trim();
+
+
+  if (!commandBody) {
+    return false;
+  }
+
+
+  const command =
+    String(
+      commandBody
+        .split(/\s+/)[0] ||
+      ''
+    ).toLowerCase();
+
+
+  return (
+    command === 'grup' ||
+    command === 'group'
+  );
+}
+
+
+// ====================================================================
+// 🚫 WHATSAPP STATUS
+// ====================================================================
+
+function isStatusBroadcast(
+  jidValue
+) {
+  return String(
+    jidValue || ''
+  ) === 'status@broadcast';
+}
+
+
+function getUpdateRemoteJid(
+  item
+) {
+  return (
+    item?.key?.remoteJid ||
+    item?.update?.key?.remoteJid ||
+    item?.update?.message?.protocolMessage?.key?.remoteJid ||
+    item?.message?.protocolMessage?.key?.remoteJid ||
+    ''
+  );
+}
 
 
 // ====================================================================
 // 🛡️ MESSAGE STORE ANTI DELETE
 // ====================================================================
 
-const messageStore = new Map();
+const messageStore =
+  new Map();
+
 
 // Pesan anti-delete disimpan selama 24 jam
-const MESSAGE_STORE_TTL_MS = 24 * 60 * 60 * 1000;
+const MESSAGE_STORE_TTL_MS =
+  24 * 60 * 60 * 1000;
 
 
 // ====================================================================
@@ -51,14 +180,17 @@ const MESSAGE_STORE_TTL_MS = 24 * 60 * 60 * 1000;
 // Media disimpan di storage VPS, bukan disimpan terus di RAM
 // ====================================================================
 
-const MEDIA_CACHE_DIR = path.join(
-  __dirname,
-  '..',
-  'storage',
-  'antidelete-cache'
-);
+const MEDIA_CACHE_DIR =
+  path.join(
+    __dirname,
+    '..',
+    'storage',
+    'antidelete-cache'
+  );
 
-let mediaCacheInitialized = false;
+
+let mediaCacheInitialized =
+  false;
 
 
 // ====================================================================
@@ -66,9 +198,12 @@ let mediaCacheInitialized = false;
 // ====================================================================
 
 async function initMediaCache() {
-  if (mediaCacheInitialized) {
+  if (
+    mediaCacheInitialized
+  ) {
     return;
   }
+
 
   /*
     Saat proses Node benar-benar restart,
@@ -86,6 +221,7 @@ async function initMediaCache() {
     }
   );
 
+
   await fs.promises.mkdir(
     MEDIA_CACHE_DIR,
     {
@@ -93,7 +229,9 @@ async function initMediaCache() {
     }
   );
 
-  mediaCacheInitialized = true;
+
+  mediaCacheInitialized =
+    true;
 }
 
 
@@ -101,10 +239,14 @@ async function initMediaCache() {
 // 🛡️ DETEKSI PROTOCOL MESSAGE / REVOKE
 // ====================================================================
 
-function hasProtocolMessage(msg) {
-  const normalized = normalizeMessageContent(
-    msg.message || {}
-  );
+function hasProtocolMessage(
+  msg
+) {
+  const normalized =
+    normalizeMessageContent(
+      msg.message || {}
+    );
+
 
   return Boolean(
     normalized?.protocolMessage
@@ -120,12 +262,17 @@ function hasProtocolMessage(msg) {
 // Tidak simpan caption View Once.
 // ====================================================================
 
-function isViewOnceMessage(content) {
-  if (!content || typeof content !== 'object') {
+function isViewOnceMessage(
+  content
+) {
+  if (
+    !content ||
+    typeof content !== 'object'
+  ) {
     return false;
   }
 
-  // Wrapper View Once
+
   if (
     content.viewOnceMessage ||
     content.viewOnceMessageV2 ||
@@ -134,7 +281,7 @@ function isViewOnceMessage(content) {
     return true;
   }
 
-  // Beberapa pesan memiliki flag viewOnce langsung
+
   if (
     content.imageMessage?.viewOnce === true ||
     content.videoMessage?.viewOnce === true
@@ -142,7 +289,7 @@ function isViewOnceMessage(content) {
     return true;
   }
 
-  // Cek jika pesan berada di dalam wrapper lain
+
   return Boolean(
     isViewOnceMessage(
       content.ephemeralMessage?.message
@@ -172,10 +319,14 @@ function isViewOnceMessage(content) {
 // Tidak support View Once.
 // ====================================================================
 
-function getSupportedMediaInfo(msg) {
-  const normalized = normalizeMessageContent(
-    msg.message || {}
-  );
+function getSupportedMediaInfo(
+  msg
+) {
+  const normalized =
+    normalizeMessageContent(
+      msg.message || {}
+    );
+
 
   if (!normalized) {
     return null;
@@ -186,19 +337,27 @@ function getSupportedMediaInfo(msg) {
   // IMAGE
   // =========================
 
-  if (normalized.imageMessage) {
+  if (
+    normalized.imageMessage
+  ) {
     return {
-      type: 'image',
+      type:
+        'image',
 
       mimetype:
-        normalized.imageMessage.mimetype ||
+        normalized
+          .imageMessage
+          .mimetype ||
         'image/jpeg',
 
       caption:
-        normalized.imageMessage.caption ||
+        normalized
+          .imageMessage
+          .caption ||
         '',
 
-      ptt: false,
+      ptt:
+        false,
     };
   }
 
@@ -207,19 +366,27 @@ function getSupportedMediaInfo(msg) {
   // VIDEO
   // =========================
 
-  if (normalized.videoMessage) {
+  if (
+    normalized.videoMessage
+  ) {
     return {
-      type: 'video',
+      type:
+        'video',
 
       mimetype:
-        normalized.videoMessage.mimetype ||
+        normalized
+          .videoMessage
+          .mimetype ||
         'video/mp4',
 
       caption:
-        normalized.videoMessage.caption ||
+        normalized
+          .videoMessage
+          .caption ||
         '',
 
-      ptt: false,
+      ptt:
+        false,
     };
   }
 
@@ -228,19 +395,28 @@ function getSupportedMediaInfo(msg) {
   // AUDIO / VOICE NOTE
   // =========================
 
-  if (normalized.audioMessage) {
+  if (
+    normalized.audioMessage
+  ) {
     return {
-      type: 'audio',
+      type:
+        'audio',
 
       mimetype:
-        normalized.audioMessage.mimetype ||
+        normalized
+          .audioMessage
+          .mimetype ||
         'audio/ogg; codecs=opus',
 
-      caption: '',
+      caption:
+        '',
 
-      ptt: Boolean(
-        normalized.audioMessage.ptt
-      ),
+      ptt:
+        Boolean(
+          normalized
+            .audioMessage
+            .ptt
+        ),
     };
   }
 
@@ -249,17 +425,24 @@ function getSupportedMediaInfo(msg) {
   // STICKER
   // =========================
 
-  if (normalized.stickerMessage) {
+  if (
+    normalized.stickerMessage
+  ) {
     return {
-      type: 'sticker',
+      type:
+        'sticker',
 
       mimetype:
-        normalized.stickerMessage.mimetype ||
+        normalized
+          .stickerMessage
+          .mimetype ||
         'image/webp',
 
-      caption: '',
+      caption:
+        '',
 
-      ptt: false,
+      ptt:
+        false,
     };
   }
 
@@ -272,10 +455,13 @@ function getSupportedMediaInfo(msg) {
 // 📎 MENENTUKAN EXTENSION FILE MEDIA
 // ====================================================================
 
-function extensionFromMedia(mediaInfo) {
-  const mime = String(
-    mediaInfo?.mimetype || ''
-  ).toLowerCase();
+function extensionFromMedia(
+  mediaInfo
+) {
+  const mime =
+    String(
+      mediaInfo?.mimetype || ''
+    ).toLowerCase();
 
 
   if (
@@ -286,56 +472,81 @@ function extensionFromMedia(mediaInfo) {
   }
 
 
-  if (mime.includes('png')) {
+  if (
+    mime.includes('png')
+  ) {
     return '.png';
   }
 
 
-  if (mime.includes('webp')) {
+  if (
+    mime.includes('webp')
+  ) {
     return '.webp';
   }
 
 
-  if (mime.includes('mp4')) {
+  if (
+    mime.includes('mp4')
+  ) {
     return '.mp4';
   }
 
 
-  if (mime.includes('ogg')) {
+  if (
+    mime.includes('ogg')
+  ) {
     return '.ogg';
   }
 
 
-  if (mime.includes('mpeg')) {
+  if (
+    mime.includes('mpeg')
+  ) {
     return '.mp3';
   }
 
 
-  if (mime.includes('aac')) {
+  if (
+    mime.includes('aac')
+  ) {
     return '.aac';
   }
 
 
-  if (mime.includes('wav')) {
+  if (
+    mime.includes('wav')
+  ) {
     return '.wav';
   }
 
 
   // Fallback berdasarkan tipe media
 
-  if (mediaInfo?.type === 'image') {
+  if (
+    mediaInfo?.type === 'image'
+  ) {
     return '.jpg';
   }
 
-  if (mediaInfo?.type === 'video') {
+
+  if (
+    mediaInfo?.type === 'video'
+  ) {
     return '.mp4';
   }
 
-  if (mediaInfo?.type === 'audio') {
+
+  if (
+    mediaInfo?.type === 'audio'
+  ) {
     return '.ogg';
   }
 
-  if (mediaInfo?.type === 'sticker') {
+
+  if (
+    mediaInfo?.type === 'sticker'
+  ) {
     return '.webp';
   }
 
@@ -348,7 +559,9 @@ function extensionFromMedia(mediaInfo) {
 // 🧹 MEMBUAT NAMA FILE AMAN
 // ====================================================================
 
-function safeFilePart(value) {
+function safeFilePart(
+  value
+) {
   return String(
     value || 'unknown'
   ).replace(
@@ -368,22 +581,30 @@ async function cacheMediaToDisk(
 ) {
   await initMediaCache();
 
-  const messageId = safeFilePart(
-    msg.key?.id
-  );
 
-  const remoteJid = safeFilePart(
-    msg.key?.remoteJid
-  );
+  const messageId =
+    safeFilePart(
+      msg.key?.id
+    );
+
+
+  const remoteJid =
+    safeFilePart(
+      msg.key?.remoteJid
+    );
+
 
   const extension =
-    extensionFromMedia(mediaInfo);
+    extensionFromMedia(
+      mediaInfo
+    );
 
 
-  const filePath = path.join(
-    MEDIA_CACHE_DIR,
-    `${Date.now()}_${remoteJid}_${messageId}${extension}`
-  );
+  const filePath =
+    path.join(
+      MEDIA_CACHE_DIR,
+      `${Date.now()}_${remoteJid}_${messageId}${extension}`
+    );
 
 
   try {
@@ -403,7 +624,9 @@ async function cacheMediaToDisk(
 
     await pipeline(
       mediaStream,
-      fs.createWriteStream(filePath)
+      fs.createWriteStream(
+        filePath
+      )
     );
 
 
@@ -418,7 +641,9 @@ async function cacheMediaToDisk(
       {
         force: true,
       }
-    ).catch(() => {});
+    ).catch(
+      () => {}
+    );
 
 
     throw err;
@@ -430,10 +655,13 @@ async function cacheMediaToDisk(
 // 🗑️ HAPUS MEDIA CACHE
 // ====================================================================
 
-async function deleteCachedMedia(filePath) {
+async function deleteCachedMedia(
+  filePath
+) {
   if (!filePath) {
     return;
   }
+
 
   try {
 
@@ -467,14 +695,19 @@ async function start() {
   // SESSION
   // ==================================================================
 
-  const sessionDir = path.join(
-    __dirname,
-    '..',
-    'sessions'
-  );
+  const sessionDir =
+    path.join(
+      __dirname,
+      '..',
+      'sessions'
+    );
 
 
-  if (!fs.existsSync(sessionDir)) {
+  if (
+    !fs.existsSync(
+      sessionDir
+    )
+  ) {
 
     fs.mkdirSync(
       sessionDir,
@@ -489,37 +722,45 @@ async function start() {
   const {
     state,
     saveCreds,
-  } = await useMultiFileAuthState(
-    sessionDir
-  );
+  } =
+    await useMultiFileAuthState(
+      sessionDir
+    );
 
 
   const {
     version,
-  } = await fetchLatestBaileysVersion();
+  } =
+    await fetchLatestBaileysVersion();
 
 
   // ==================================================================
   // WHATSAPP SOCKET
   // ==================================================================
 
-  const sock = makeWASocket({
+  const sock =
+    makeWASocket({
 
-    version,
+      version,
 
-    auth: state,
+      auth:
+        state,
 
-    printQRInTerminal: false,
+      printQRInTerminal:
+        false,
 
-    logger: pino({
-      level: 'error',
-    }),
+      logger:
+        pino({
+          level:
+            'error',
+        }),
 
-    browser: Browsers.macOS(
-      'Chrome'
-    ),
+      browser:
+        Browsers.macOS(
+          'Chrome'
+        ),
 
-  });
+    });
 
 
   // ==================================================================
@@ -528,45 +769,52 @@ async function start() {
   // Agar pesan bot sendiri tidak masuk anti-delete.
   // ==================================================================
 
-  const botMessageIds = new Set();
+  const botMessageIds =
+    new Set();
 
 
   const originalSendMessage =
-    sock.sendMessage.bind(sock);
+    sock.sendMessage.bind(
+      sock
+    );
 
 
-  sock.sendMessage = async (...args) => {
+  sock.sendMessage =
+    async (...args) => {
 
-    const sent =
-      await originalSendMessage(
-        ...args
-      );
-
-
-    const messageId =
-      sent?.key?.id;
+      const sent =
+        await originalSendMessage(
+          ...args
+        );
 
 
-    if (messageId) {
-
-      botMessageIds.add(
-        messageId
-      );
+      const messageId =
+        sent?.key?.id;
 
 
-      setTimeout(() => {
+      if (messageId) {
 
-        botMessageIds.delete(
+        botMessageIds.add(
           messageId
         );
 
-      }, 5 * 60 * 1000);
 
-    }
+        setTimeout(
+          () => {
+
+            botMessageIds.delete(
+              messageId
+            );
+
+          },
+          5 * 60 * 1000
+        );
+
+      }
 
 
-    return sent;
-  };
+      return sent;
+    };
 
 
   // ==================================================================
@@ -581,7 +829,8 @@ async function start() {
         connection,
         lastDisconnect,
         qr,
-      } = update;
+      } =
+        update;
 
 
       // ==============================
@@ -594,10 +843,12 @@ async function start() {
           '\nScan QR ini dari WhatsApp > Perangkat tertaut:\n'
         );
 
+
         qrcode.generate(
           qr,
           {
-            small: true,
+            small:
+              true,
           }
         );
       }
@@ -607,12 +858,51 @@ async function start() {
       // CONNECTED
       // ==============================
 
-      if (connection === 'open') {
+      if (
+        connection === 'open'
+      ) {
+
+        const botJid =
+          String(
+            sock.user?.id || ''
+          );
+
+
+        const botNumber =
+          botJid
+            .split('@')[0]
+            .split(':')[0];
+
 
         console.log(
           `✅ ${config.botName} aktif.`
         );
 
+
+        console.log(
+          '📱 Nomor bot:',
+          botNumber ||
+          'Tidak diketahui'
+        );
+
+
+        console.log(
+          '🆔 JID bot:',
+          botJid ||
+          'Tidak diketahui'
+        );
+
+
+        if (
+          sock.user?.lid
+        ) {
+
+          console.log(
+            '🆔 LID bot:',
+            sock.user.lid
+          );
+
+        }
       }
 
 
@@ -620,7 +910,9 @@ async function start() {
       // DISCONNECTED
       // ==============================
 
-      if (connection === 'close') {
+      if (
+        connection === 'close'
+      ) {
 
         const statusCode =
           lastDisconnect
@@ -638,10 +930,12 @@ async function start() {
           'Koneksi tertutup.'
         );
 
+
         console.log(
           'Status code:',
           statusCode
         );
+
 
         console.log(
           'Reconnect:',
@@ -649,7 +943,9 @@ async function start() {
         );
 
 
-        if (shouldReconnect) {
+        if (
+          shouldReconnect
+        ) {
 
           start().catch(
             (err) => {
@@ -721,9 +1017,31 @@ async function start() {
 
       try {
 
+        const filteredUpdate =
+          Array.isArray(
+            update
+          )
+            ? update.filter(
+                (item) =>
+                  !isStatusBroadcast(
+                    getUpdateRemoteJid(
+                      item
+                    )
+                  )
+              )
+            : [];
+
+
+        if (
+          !filteredUpdate.length
+        ) {
+          return;
+        }
+
+
         await handleRevokeMessage(
           sock,
-          update,
+          filteredUpdate,
           messageStore
         );
 
@@ -745,11 +1063,33 @@ async function start() {
 
   sock.ev.on(
     'messages.upsert',
-    async ({ messages }) => {
+    async ({
+      messages,
+      type,
+    }) => {
 
-      for (const msg of messages) {
+      // ==============================================================
+      // ABAIKAN HISTORY / SINKRONISASI PESAN LAMA
+      //
+      // Pesan real-time Baileys masuk sebagai "notify".
+      // ==============================================================
+      
+      if (
+        type &&
+        type !== 'notify'
+      ) {
+        return;
+      }
 
-        if (!msg.message) {
+
+      for (
+        const msg
+        of messages || []
+      ) {
+
+        if (
+          !msg?.message
+        ) {
           continue;
         }
 
@@ -757,23 +1097,7 @@ async function start() {
         try {
 
           // ============================================================
-          // 🗑️ DETEKSI PESAN DIHAPUS / REVOKE
-          // ============================================================
-
-          if (hasProtocolMessage(msg)) {
-
-            await handleRevokeMessage(
-              sock,
-              [msg],
-              messageStore
-            );
-
-            continue;
-          }
-
-
-          // ============================================================
-          // ID PESAN
+          // ID PESAN / CHAT
           // ============================================================
 
           const messageId =
@@ -794,12 +1118,52 @@ async function start() {
 
 
           // ============================================================
+          // 🚫 ABAIKAN WHATSAPP STATUS
+          //
+          // Status bukan private chat maupun grup.
+          // Tidak masuk anti-delete, router, welcome, atau AI.
+          // ============================================================
+
+          if (
+            isStatusBroadcast(
+              remoteJid
+            )
+          ) {
+
+            continue;
+          }
+
+
+          // ============================================================
+          // 🗑️ DETEKSI PESAN DIHAPUS / REVOKE
+          // ============================================================
+
+          if (
+            hasProtocolMessage(
+              msg
+            )
+          ) {
+
+            await handleRevokeMessage(
+              sock,
+              [msg],
+              messageStore
+            );
+
+
+            continue;
+          }
+
+
+          // ============================================================
           // JANGAN SIMPAN PESAN BOT SENDIRI
           // ============================================================
 
           if (
             msg.key.fromMe &&
-            botMessageIds.has(messageId)
+            botMessageIds.has(
+              messageId
+            )
           ) {
 
             continue;
@@ -818,14 +1182,18 @@ async function start() {
             );
 
 
-          if (!viewOnce) {
+          if (
+            !viewOnce
+          ) {
 
             // ==========================================================
             // AMBIL TEXT / CAPTION
             // ==========================================================
 
             const incomingText =
-              pickText(msg) || '';
+              pickText(
+                msg
+              ) || '';
 
 
             // ==========================================================
@@ -838,14 +1206,17 @@ async function start() {
               );
 
 
-            let mediaPath = null;
+            let mediaPath =
+              null;
 
 
             // ==========================================================
             // SIMPAN MEDIA KE DISK
             // ==========================================================
 
-            if (mediaInfo) {
+            if (
+              mediaInfo
+            ) {
 
               try {
 
@@ -867,7 +1238,8 @@ async function start() {
 
                 console.error(
                   '[MEDIA CACHE ERROR]',
-                  err?.message || err
+                  err?.message ||
+                  err
                 );
 
               }
@@ -903,20 +1275,25 @@ async function start() {
 
               const savedData = {
 
-                id: messageId,
+                id:
+                  messageId,
 
-                from: remoteJid,
+                from:
+                  remoteJid,
 
-                sender: senderJid,
+                sender:
+                  senderJid,
 
-                text: incomingText,
+                text:
+                  incomingText,
 
                 fromMe:
                   Boolean(
                     msg.key.fromMe
                   ),
 
-                rawMsg: msg,
+                rawMsg:
+                  msg,
 
                 media:
                   mediaPath
@@ -1030,26 +1407,48 @@ async function start() {
 
           } else {
 
-            // ==========================================================
-            // VIEW ONCE
-            //
-            // Tidak download.
-            // Tidak cache.
-            // Tidak masuk messageStore.
-            // ==========================================================
-
             console.log(
               '[MESSAGE STORE] View Once dilewati dan tidak disimpan:',
               messageId
             );
+
+          }
+
+
+          // ============================================================
+          // 👥 PENGAMAN GRUP
+          //
+          // Jika .grup OFF:
+          // - menu / .menu tidak diproses
+          // - .nocall tidak diproses
+          // - AI tidak diproses
+          // - command lain tidak diproses
+          //
+          // Hanya owner / akun bot sendiri yang boleh menjalankan
+          // .grup ... atau .group ...
+          // ============================================================
+
+          if (
+            isGroupJid(
+              remoteJid
+            ) &&
+            !groupFeatureEnabled(
+              remoteJid
+            ) &&
+            !isAllowedGroupControl(
+              msg,
+              pickText(
+                msg
+              ) || ''
+            )
+          ) {
+
+            continue;
           }
 
 
           // ============================================================
           // 📵 COMMAND NO CALL
-          // .nocall on
-          // .nocall off
-          // .nocall
           // ============================================================
 
           try {
@@ -1061,7 +1460,10 @@ async function start() {
               );
 
 
-            if (noCallHandled) {
+            if (
+              noCallHandled
+            ) {
+
               continue;
             }
 
@@ -1076,10 +1478,30 @@ async function start() {
 
 
           // ============================================================
+          // 🚦 ROUTER COMMAND UTAMA
+          //
+          // Router dijalankan dulu supaya welcome nomor baru
+          // sempat diproses sebelum auto AI membalas.
+          // ============================================================
+
+          await route(
+            sock,
+            msg
+          );
+
+
+          // ============================================================
           // 🤖 COMMAND AI TEXT
+          //
+          // .aion
+          // .aioff
+          // .aistatus
+          //
           // .balas
           // .maaf
           // .romantis
+          //
+          // Auto AI premium jika aktif.
           // ============================================================
 
           try {
@@ -1091,7 +1513,10 @@ async function start() {
               );
 
 
-            if (aiHandled) {
+            if (
+              aiHandled
+            ) {
+
               continue;
             }
 
@@ -1103,16 +1528,6 @@ async function start() {
             );
 
           }
-
-
-          // ============================================================
-          // ROUTER COMMAND UTAMA
-          // ============================================================
-
-          await route(
-            sock,
-            msg
-          );
 
 
         } catch (err) {

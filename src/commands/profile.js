@@ -1,55 +1,125 @@
 ﻿const config = require('../config');
-const { isOwner, jid } = require('../utils/format');
+
+const {
+  isOwner,
+  jid,
+} = require('../utils/format');
+
+
+// ====================================================================
+// 📱 FORMAT NOMOR WHATSAPP
+// ====================================================================
 
 function formatPhoneNumber(number) {
-  const clean = String(number || '').replace(/\D/g, '');
+  const clean =
+    String(
+      number || ''
+    ).replace(
+      /\D/g,
+      ''
+    );
 
-  if (!clean) return '-';
+  if (!clean) {
+    return '-';
+  }
 
-  if (clean.startsWith('62')) {
+  if (
+    clean.startsWith('62')
+  ) {
     return `+${clean}`;
   }
 
-  if (clean.startsWith('0')) {
+  if (
+    clean.startsWith('0')
+  ) {
     return `+62${clean.slice(1)}`;
   }
 
   return clean;
 }
 
+
+// ====================================================================
+// 📷 FORMAT INSTAGRAM
+// ====================================================================
+
 function formatInstagramLink(value) {
-  const raw = String(value || '').trim();
+  const raw =
+    String(
+      value || ''
+    ).trim();
 
-  if (!raw) return '-';
+  if (!raw) {
+    return '-';
+  }
 
-  const username = raw
-    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
-    .replace(/^@/, '')
-    .replace(/\/$/, '')
-    .trim();
+  const username =
+    raw
+      .replace(
+        /^https?:\/\/(www\.)?instagram\.com\//i,
+        ''
+      )
+      .replace(
+        /^@/,
+        ''
+      )
+      .replace(
+        /\/$/,
+        ''
+      )
+      .trim();
 
-  if (!username) return '-';
+  if (!username) {
+    return '-';
+  }
 
-  return `https://www.instagram.com/${username}/`;
+  return (
+    `https://www.instagram.com/${username}/`
+  );
 }
 
-function extractAboutText(value) {
-  if (!value) return '';
 
-  if (typeof value === 'string') {
+// ====================================================================
+// 📝 AMBIL TEXT ABOUT
+// ====================================================================
+
+function extractAboutText(value) {
+  if (!value) {
+    return '';
+  }
+
+
+  if (
+    typeof value === 'string'
+  ) {
     return value.trim();
   }
 
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const text = extractAboutText(item);
-      if (text) return text;
+
+  if (
+    Array.isArray(value)
+  ) {
+    for (
+      const item
+      of value
+    ) {
+      const text =
+        extractAboutText(
+          item
+        );
+
+      if (text) {
+        return text;
+      }
     }
 
     return '';
   }
 
-  if (typeof value === 'object') {
+
+  if (
+    typeof value === 'object'
+  ) {
     const possibleKeys = [
       'status',
       'text',
@@ -58,47 +128,132 @@ function extractAboutText(value) {
       'message',
     ];
 
-    for (const key of possibleKeys) {
-      const text = extractAboutText(value[key]);
-      if (text) return text;
+
+    for (
+      const key
+      of possibleKeys
+    ) {
+      const text =
+        extractAboutText(
+          value[key]
+        );
+
+      if (text) {
+        return text;
+      }
     }
   }
+
 
   return '';
 }
 
-async function getProfilePhotoUrl(sock, targetJid) {
+
+// ====================================================================
+// 🖼️ FOTO PROFILE
+// ====================================================================
+
+async function getProfilePhotoUrl(
+  sock,
+  targetJid
+) {
   try {
-    return await sock.profilePictureUrl(targetJid, 'image');
+    return await sock
+      .profilePictureUrl(
+        targetJid,
+        'image'
+      );
+
   } catch (err) {
     return null;
   }
 }
 
-async function getWhatsappAbout(sock, targetJid) {
+
+// ====================================================================
+// 📝 WHATSAPP ABOUT
+// ====================================================================
+
+async function getWhatsappAbout(
+  sock,
+  targetJid
+) {
   try {
-    const result = await sock.fetchStatus(targetJid);
-    return extractAboutText(result);
+    const result =
+      await sock.fetchStatus(
+        targetJid
+      );
+
+    return extractAboutText(
+      result
+    );
+
   } catch (err) {
     return '';
   }
 }
 
+
+// ====================================================================
+// 👤 PROFILE OWNER
+// ====================================================================
+
 async function me(ctx) {
-  // Selain owner: bot diam
-  if (!isOwner(ctx.msg)) return;
+  // Hanya owner.
+  if (
+    !isOwner(
+      ctx.msg
+    )
+  ) {
+    return;
+  }
 
-  const ownerJid = jid(config.ownerNumber);
-  const photoUrl = await getProfilePhotoUrl(ctx.sock, ownerJid);
 
-  const whatsappAbout = await getWhatsappAbout(ctx.sock, ownerJid);
+  const ownerJid =
+    jid(
+      config.ownerNumber
+    );
 
-  const name = config.ownerMentionName || 'Fauzy';
-  const phone = formatPhoneNumber(config.ownerNumber);
-  const instagramLink = formatInstagramLink(config.ownerInstagram);
-  const about = config.ownerAbout || whatsappAbout || '-';
 
-  const caption = `👤 *PROFILE ${name.toUpperCase()}*
+  const photoUrl =
+    await getProfilePhotoUrl(
+      ctx.sock,
+      ownerJid
+    );
+
+
+  const whatsappAbout =
+    await getWhatsappAbout(
+      ctx.sock,
+      ownerJid
+    );
+
+
+  const name =
+    config.ownerMentionName ||
+    'Fauzy';
+
+
+  const phone =
+    formatPhoneNumber(
+      config.ownerNumber
+    );
+
+
+  const instagramLink =
+    formatInstagramLink(
+      config.ownerInstagram
+    );
+
+
+  const about =
+    config.ownerAbout ||
+    whatsappAbout ||
+    '-';
+
+
+  const caption =
+`👤 *PROFILE ${name.toUpperCase()}*
 
 *Nama:* ${name}
 *Nomor WhatsApp:* ${phone}
@@ -107,115 +262,174 @@ async function me(ctx) {
 
 ✨ Powered by ${config.botName}`;
 
+
   if (photoUrl) {
     return ctx.sock.sendMessage(
       ctx.from,
       {
-        image: { url: photoUrl },
+        image: {
+          url:
+            photoUrl,
+        },
+
         caption,
       },
-      { quoted: ctx.msg }
+      {
+        quoted:
+          ctx.msg,
+      }
     );
   }
 
-  return ctx.reply(caption);
+
+  return ctx.reply(
+    caption
+  );
 }
+
+
+// ====================================================================
+// 📋 DAFTAR COMMAND
+// ====================================================================
 
 async function commandList(ctx) {
-  const owner = isOwner(ctx.msg);
+  const prefix =
+    config.prefix || '.';
 
-  const customerCommands = `✨ *DAFTAR COMMAND BOT* ✨
+
+  const owner =
+    isOwner(
+      ctx.msg
+    );
+
+
+  // ==================================================================
+  // 👤 COMMAND CUSTOMER
+  // ==================================================================
+
+  const customerCommands =
+`✨ *DAFTAR COMMAND BOT* ✨
 
 *MENU UMUM*
-• ${config.prefix}menu — tampilkan menu utama
-• ${config.prefix}help — tampilkan menu utama
-• ${config.prefix}command — tampilkan semua command
-• ${config.prefix}commands — alias command
-• ${config.prefix}ping — cek latency, uptime, RAM, CPU, dan status server
+• ${prefix}menu — tampilkan menu utama
+• ${prefix}help — alias menu
+• ${prefix}command — tampilkan daftar command
+• ${prefix}commands — alias command
+• ${prefix}ping — cek status dan respon bot
 
-*MENU CUSTOMER*
-• ${config.prefix}catalog — daftar aplikasi premium
-• ${config.prefix}katalog — alias catalog
-• ${config.prefix}premium — alias catalog
-• ${config.prefix}catalog canva — detail produk
-• ${config.prefix}jasa — daftar layanan asistensi tugas
-• ${config.prefix}tugas — alias jasa
-• ${config.prefix}joki — alias jasa
-• ${config.prefix}jasa makalah — detail layanan
-• ${config.prefix}payment — metode pembayaran
-• ${config.prefix}bayar — alias payment
-• ${config.prefix}order premium | CANVA | 1 Tahun Member + Designer | email kamu
-• ${config.prefix}order jasa | Makalah | detail tugas + deadline
-• ${config.prefix}status ORD-xxxx — cek status order
-• ${config.prefix}cancel ORD-xxxx — batalkan order
+*PEMBAYARAN*
+• ${prefix}payment — tampilkan metode pembayaran
+• ${prefix}bayar — alias payment
 
-*MENU AI*
-• ${config.prefix}balas <teks> — bantu buat balasan chat
-• ${config.prefix}maaf <masalah> — buat pesan minta maaf
-• ${config.prefix}romantis <tema> — buat pesan romantis untuk pasangan
+*BMKG*
+• ${prefix}gempa — informasi gempa terbaru
+• ${prefix}cuaca — prakiraan cuaca lokasi default
+• ${prefix}cuaca : Tamansari — cari cuaca berdasarkan desa/kelurahan
+• ${prefix}cuaca : 35.07.06.2012 — cari berdasarkan kode ADM4 BMKG`;
 
-Contoh AI:
-• ${config.prefix}balas maaf kak barangnya belum ready, besok baru ada
-• ${config.prefix}maaf aku lupa balas chat dari kemarin
-• ${config.prefix}romantis buat pacar yang lagi capek kerja
 
-*MENU BMKG*
-• ${config.prefix}gempa — tampilkan gempa terbaru, gempa dirasakan, dan gempa terkini BMKG
-• ${config.prefix}cuaca — prakiraan cuaca 3 hari untuk lokasi default
-• ${config.prefix}cuaca : Tamansari — prakiraan cuaca berdasarkan desa/kelurahan
-• ${config.prefix}cuaca : 35.07.06.2012 — prakiraan cuaca berdasarkan kode ADM4 BMKG`;
+  // ==================================================================
+  // 👑 COMMAND OWNER
+  // ==================================================================
 
-  const ownerCommands = `
+  const ownerCommands =
+`
 
-*MENU OWNER / ADMIN*
-• ${config.prefix}me — tampilkan profil owner
-• ${config.prefix}googleimage : semeru — kirim 3 gambar teratas dari Google Image
-• ${config.prefix}admin orders — lihat semua order
-• ${config.prefix}admin order ORD-xxxx — lihat detail order
-• ${config.prefix}admin status ORD-xxxx proses/selesai/batal/revisi
-• ${config.prefix}admin note ORD-xxxx catatan
-• ${config.prefix}admin stats — statistik order
-• ${config.prefix}setlog on — aktifkan audit log
-• ${config.prefix}setlog off — matikan audit log
+👑 *COMMAND OWNER*
 
-*MENU NO CALL*
-• ${config.prefix}nocall on — aktifkan tolak panggilan otomatis
-• ${config.prefix}nocall off — matikan tolak panggilan otomatis
-• ${config.prefix}nocall — cek status fitur No Call
+*AI CUSTOMER SERVICE*
+• ${prefix}aion — aktifkan balasan otomatis AI
+• ${prefix}aioff — nonaktifkan balasan otomatis AI
+• ${prefix}aistatus — cek status AI customer service
 
-*MENU CUSTOM TEXT*
-• ${config.prefix}addtext love you : isi teks panjang — tambah custom text
-• ${config.prefix}deltext love you — hapus custom text
+Harga dan paket akun premium dibaca dari:
+*src/data/pricelist.txt*
 
-*MENU EDIT HARGA*
-• ${config.prefix}edit harga canva — edit harga produk
-• ${config.prefix}edit harga netflix — edit harga produk lain
-• ${config.prefix}edit harga jasa makalah — edit harga jasa
+*AI MANUAL*
+• ${prefix}balas <teks> — buat balasan WhatsApp
+• ${prefix}maaf <masalah> — buat pesan permintaan maaf
+• ${prefix}romantis <tema> — buat pesan romantis
 
-*MENU GRUP*
-• ${config.prefix}grup on — aktifkan fitur otomatis di grup ini
-• ${config.prefix}grup off — matikan fitur otomatis di grup ini
-• ${config.prefix}grup status — cek status fitur grup
+Contoh:
+• ${prefix}balas customer menanyakan kapan pesanan tersedia
+• ${prefix}maaf saya terlambat membalas pesan
+• ${prefix}romantis pasangan sedang lelah bekerja
 
-*MENU PENYIMPANAN*
-• ${config.prefix}reset stats — cek penyimpanan bot
-• ${config.prefix}reset logs confirm — hapus audit log
-• ${config.prefix}reset uploads confirm — hapus file upload
-• ${config.prefix}reset deliveries confirm — hapus file delivery
-• ${config.prefix}reset orders confirm — hapus semua order
-• ${config.prefix}reset all confirm — reset data bot`;
+Command AI manual tetap dapat digunakan meskipun ${prefix}aioff.
 
-  const note = `
+*PROFILE*
+• ${prefix}me — tampilkan profil owner
 
-Catatan:
-• Command owner/admin hanya bisa digunakan oleh owner.
-• Fitur No Call hanya bisa diatur oleh owner/bot sendiri.
-• Fitur grup hanya aktif kalau sudah dinyalakan dengan ${config.prefix}grup on.
-• Custom text hanya bisa dipanggil oleh owner.
-• ${config.prefix}googleimage hanya bisa digunakan oleh owner.`;
+*GOOGLE IMAGE*
+• ${prefix}googleimage : semeru — cari dan kirim gambar
 
-  return ctx.reply(customerCommands + (owner ? ownerCommands : '') + note);
+*NO CALL*
+• ${prefix}nocall on — aktifkan penolakan panggilan otomatis
+• ${prefix}nocall off — nonaktifkan penolakan panggilan otomatis
+• ${prefix}nocall — cek status No Call
+
+*CUSTOM TEXT*
+• ${prefix}addtext kata kunci : isi teks — tambah custom text
+• ${prefix}deltext kata kunci — hapus custom text
+
+*FITUR GRUP*
+• ${prefix}grup on — aktifkan fitur bot di grup ini
+• ${prefix}grup off — nonaktifkan fitur bot di grup ini
+• ${prefix}grup status — cek status fitur grup
+• ${prefix}group — alias grup
+
+*AUDIT LOG*
+• ${prefix}setlog on — aktifkan audit log
+• ${prefix}setlog off — nonaktifkan audit log
+
+*PENYIMPANAN*
+• ${prefix}reset stats — cek penggunaan penyimpanan
+• ${prefix}reset logs confirm — hapus audit log
+• ${prefix}reset uploads confirm — hapus file upload
+• ${prefix}reset deliveries confirm — hapus file delivery`;
+
+
+  // ==================================================================
+  // 📝 CATATAN
+  // ==================================================================
+
+  const customerNote =
+`
+
+*Catatan:*
+• Untuk informasi akun premium, harga, ketersediaan, dan pemesanan, silakan hubungi admin.
+• Harga resmi mengikuti daftar harga yang dikelola admin.`;
+
+
+  const ownerNote =
+`
+
+*Catatan Owner:*
+• Command owner hanya dapat digunakan oleh owner.
+• AI customer service otomatis hanya aktif setelah ${prefix}aion.
+• ${prefix}aioff tidak mematikan ${prefix}balas, ${prefix}maaf, dan ${prefix}romantis.
+• Fitur grup hanya aktif setelah ${prefix}grup on pada grup tersebut.
+• Saat fitur grup nonaktif, bot tidak merespons command lain di grup.
+• Custom text hanya dapat digunakan oleh owner.
+• ${prefix}googleimage hanya dapat digunakan oleh owner.
+• Perubahan harga cukup dilakukan pada *src/data/pricelist.txt*.`;
+
+
+  return ctx.reply(
+    customerCommands +
+    (
+      owner
+        ? ownerCommands +
+          ownerNote
+        : customerNote
+    )
+  );
 }
+
+
+// ====================================================================
+// EXPORT
+// ====================================================================
 
 module.exports = {
   me,

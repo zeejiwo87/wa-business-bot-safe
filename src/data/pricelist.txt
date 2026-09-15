@@ -1,0 +1,109 @@
+# ============================================================
+# DAFTAR HARGA
+#
+# Cara edit:
+#
+# [Nama Produk]
+# Nama Paket | harga
+#
+# Contoh:
+# [Canva Pro]
+# 1 Bulan Invite | 5000
+# Lifetime Invite | 50000
+#
+# Harga boleh ditulis:
+# 50000
+# 50.000
+# Rp50.000
+#
+# Jangan hapus tanda [ ] pada nama produk.
+# ============================================================
+
+[AI Antigravity]
+18 Bulan | 55000
+1 Tahun | 40000
+1 Bulan | 11000
+
+[ChatGPT]
+Sharing 8 User - 7 Hari | 27000
+Sharing 8 User - 1 Bulan | 43000
+Sharing 5 User - 7 Hari | 30000
+Sharing 5 User - 1 Bulan | 53000
+Sharing 3 User - 7 Hari | 40000
+Sharing 3 User - 1 Bulan | 75000
+Private - 7 Hari | 70000
+Private - 1 Bulan (Garansi 3x replace) | 182000
+Private - 1 Bulan (Full garansi) | 205000
+
+[Gemini AI Pro]
+18 Bulan Invite | 12000
+Head - 3 Bulan | 18000
+Head - 1 Tahun | 25000
+Head - 18 Bulan | 30000
+
+[Google Flow AI]
+Flow - 1.000 Kredit | 25000
+
+[Alight Motion Pro]
+3 Bulan | 7000
+9 Bulan | 8000
+1 Tahun | 11000
+
+[Apple Music Premium]
+Head - 1 Bulan | 13000
+
+[Bstation Premium]
+1 Bulan | 14000
+
+[Canva Pro]
+1 Bulan Invite | 5000
+Lifetime Invite | 50000
+Head 1 Bulan | 10000
+
+[CapCut Pro]
+7 Hari | 10000
+1 Bulan | 30000
+
+[Google Drive]
+1 Tahun - 5TB | 20000
+
+[HBO Max]
+HBO Ultimate Share | 18000
+
+[iQIYI VIP Premium]
+Private - 7 Hari | 13000
+
+[Prime Video Premium]
+Private - 1 Bulan | 30000
+Sharing - 1 Bulan | 15000
+
+[Spotify Premium]
+Famplan - 1 Bulan | 20000
+
+[Vidio Platinum]
+Mobile | 28000
+
+[VIU Premium]
+1 Bulan | 8000
+6 Bulan | 10000
+1 Tahun | 12000
+
+[Zoom Pro]
+Zoom - 7 Hari | 9000
+Zoom - 14 Hari | 11000
+
+[CEK TURNITIN]
+1 X Cek | 7000
+
+[WE TV]
+Sharing 6U - 1 Bulan | 18000
+
+
+[CATATAN]
+Pilihan sharing dan private mengikuti keterangan masing-masing paket.
+Ketik payment untuk metode pembayaran.
+
+
+[ORDER]
+Untuk order, langsung hubungi admin +6285876846768.
+
